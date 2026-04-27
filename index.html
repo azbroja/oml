@@ -280,6 +280,26 @@ function subscriptionToJson(sub) {
   };
 }
 
+// ---------- auto-discovery (repo + vapid) ----------
+function autoDetectRepo() {
+  // GitHub Pages: https://OWNER.github.io/REPO/   →  owner/repo
+  // OWNER.github.io (user/org root)               →  owner/owner.github.io
+  const m = location.host.match(/^([a-z0-9-]+)\.github\.io$/i);
+  if (!m) return null;
+  const owner = m[1];
+  const parts = location.pathname.split('/').filter(Boolean);
+  const repo = parts[0] || `${owner}.github.io`;
+  return `${owner}/${repo}`;
+}
+
+async function autoFetchVapid() {
+  try {
+    const r = await fetch('./vapid-public-key.txt', { cache: 'no-cache' });
+    if (!r.ok) return null;
+    return sanitizeAscii(await r.text());
+  } catch (_) { return null; }
+}
+
 // ---------- UI handlers ----------
 function loadCreds() {
   $('repo').value  = LS.get('repo');
@@ -413,10 +433,27 @@ $('toggleSettings').addEventListener('click', () => {
 // ---------- init ----------
 (async function init() {
   loadCreds();
+
+  // Auto-uzupełnij repo z URL-a, jeśli puste
+  if (!LS.get('repo')) {
+    const r = autoDetectRepo();
+    if (r) { LS.set('repo', r); $('repo').value = r; }
+  }
+  // Auto-pobierz VAPID public key z repo, jeśli puste
+  if (!LS.get('vapid')) {
+    const k = await autoFetchVapid();
+    if (k) { LS.set('vapid', k); $('vapid').value = k; }
+  }
+
   // Pierwsza wizyta (brak PAT) → otwórz ustawienia. Inaczej trzymaj zwinięte.
   setSettingsOpen(!LS.get('pat'));
+
   if ('serviceWorker' in navigator) {
-    try { await navigator.serviceWorker.register('./sw.js'); } catch(_) {}
+    try {
+      const reg = await navigator.serviceWorker.register('./sw.js');
+      // Wymuś sprawdzenie aktualizacji SW przy każdym otwarciu
+      reg.update().catch(() => {});
+    } catch(_) {}
   }
   if ('Notification' in window && Notification.permission === 'granted') {
     const reg = await navigator.serviceWorker.getRegistration();
