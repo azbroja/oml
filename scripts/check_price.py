@@ -37,7 +37,7 @@ STATE_PATH = DATA / "last_run.json"
 
 WARSAW = ZoneInfo("Europe/Warsaw")
 SLOTS = {"09:30", "14:30", "17:30"}
-TOLERANCE_MINUTES = 10  # cron co 10 min — uznaj 09:30..09:39 za slot 09:30
+TOLERANCE_MINUTES = 30  # cron co 5-10 min, ale Actions throttluje — daj 30 min na trafienie w slot
 
 
 @dataclass
@@ -67,6 +67,21 @@ def current_slot(now: datetime) -> str | None:
         if slot_start <= now < slot_end:
             return slot
     return None
+
+
+def latest_past_slot_today(now: datetime) -> str | None:
+    """Najpóźniejszy slot, który już minął dzisiaj (do backfill przy force/dispatch)."""
+    if now.weekday() >= 5:
+        return None
+    past = []
+    for slot in SLOTS:
+        hh, mm = map(int, slot.split(":"))
+        slot_start = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+        if slot_start <= now:
+            past.append((slot_start, slot))
+    if not past:
+        return None
+    return sorted(past)[-1][1]
 
 
 def load_json(path: Path, default):
@@ -160,7 +175,10 @@ def build_message(q: Quote, lower: float, upper: float) -> tuple[str, str, str] 
 def main() -> int:
     now = datetime.now(tz=WARSAW)
     force = os.environ.get("FORCE_NOTIFY", "false").lower() == "true"
-    slot = current_slot(now) or ("manual" if force else None)
+    slot = current_slot(now)
+    if slot is None and force:
+        # Workflow_dispatch / wymuszony — zaadresuj najnowszy minięty slot dzisiaj (backfill)
+        slot = latest_past_slot_today(now)
     log(f"Warsaw now: {now.isoformat()}  slot={slot}  force={force}")
     if slot is None:
         log("Poza slotem — kończę.")
