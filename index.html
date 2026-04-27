@@ -95,14 +95,28 @@
   .slot-price { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .slot-meta { font-size: 11px; color: var(--muted); }
   .slot-empty { color: var(--muted); font-size: 13px; font-weight: 500; }
+  .tabs {
+    display: flex; gap: 6px; padding: 4px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    margin: 12px 0;
+  }
+  .tab {
+    flex: 1; padding: 10px 12px; border-radius: 9px;
+    background: transparent; color: var(--muted);
+    font-size: 14px; font-weight: 600;
+    border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    margin-top: 0;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .tab.active { background: var(--accent); color: white; }
 </style>
 </head>
 <body>
 <header>
   <div class="header-row">
     <div>
-      <h1>OML Alert <span id="pill" class="pill off">wyłączone</span></h1>
-      <p>One More Level (GPW: OML) · 9:30 · 14:30 · 17:30 · Europe/Warsaw</p>
+      <h1>Price Alert <span id="pill" class="pill off">wyłączone</span></h1>
+      <p id="headerSub">Europe/Warsaw</p>
     </div>
     <button id="toggleSettings" class="icon-btn" aria-label="Ustawienia" title="Ustawienia">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -112,6 +126,8 @@
     </button>
   </div>
 </header>
+
+<div id="tabs" class="tabs"></div>
 
 <div class="card">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px">
@@ -130,15 +146,15 @@
 </div>
 
 <div class="card">
-  <h2>Progi cenowe (PLN)</h2>
+  <h2 id="thresholdsTitle">Progi cenowe</h2>
   <div class="row">
     <div>
       <label for="lower">Dolny</label>
-      <input id="lower" type="number" step="0.01" inputmode="decimal" placeholder="np. 25.00" />
+      <input id="lower" type="number" step="any" inputmode="decimal" placeholder="—" />
     </div>
     <div>
       <label for="upper">Górny</label>
-      <input id="upper" type="number" step="0.01" inputmode="decimal" placeholder="np. 32.00" />
+      <input id="upper" type="number" step="any" inputmode="decimal" placeholder="—" />
     </div>
   </div>
   <p class="hint">Alert wyśle się, jeśli kurs spadnie <b>poniżej</b> dolnego LUB wzrośnie <b>powyżej</b> górnego progu.</p>
@@ -326,8 +342,24 @@ async function autoFetchVapid() {
   } catch (_) { return null; }
 }
 
-// ---------- history (ostatnie kursy) ----------
-const SLOT_LABELS = ['09:30', '14:30', '17:30'];
+// ---------- multi-ticker state ----------
+let CONFIG = null;     // pełny config z serwera
+let STATE  = null;     // last_run.json
+let ACTIVE = null;     // id aktywnego tickera
+
+function activeTicker() {
+  if (!CONFIG || !Array.isArray(CONFIG.tickers)) return null;
+  return CONFIG.tickers.find(t => t.id === ACTIVE) || CONFIG.tickers[0] || null;
+}
+
+function fmtPrice(value, currency) {
+  if (value == null || isNaN(value)) return '—';
+  const c = (currency || '').toUpperCase();
+  if (c === 'USD' && value >= 1000) {
+    return new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 }).format(value);
+  }
+  return value.toFixed(2);
+}
 
 function fmtPriceTime(iso) {
   if (!iso) return '';
@@ -337,20 +369,69 @@ function fmtPriceTime(iso) {
   } catch (_) { return iso; }
 }
 
-async function fetchHistory() {
-  // Pobierz prosto z Pages tej samej domeny (cache-bust przez query string)
-  const url = `./data/last_run.json?t=${Date.now()}`;
+async function fetchConfig() {
   try {
-    const r = await fetch(url, { cache: 'no-store' });
+    const r = await fetch(`./data/config.json?t=${Date.now()}`, { cache: 'no-store' });
     if (!r.ok) return null;
     return await r.json();
   } catch (_) { return null; }
 }
 
-function renderHistory(state) {
+async function fetchState() {
+  try {
+    const r = await fetch(`./data/last_run.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (_) { return null; }
+}
+
+function renderTabs() {
+  const tabs = $('tabs');
+  if (!CONFIG || !Array.isArray(CONFIG.tickers) || CONFIG.tickers.length === 0) {
+    tabs.innerHTML = '';
+    tabs.classList.add('hidden');
+    return;
+  }
+  tabs.classList.remove('hidden');
+  tabs.innerHTML = CONFIG.tickers.map(t => {
+    const isActive = t.id === ACTIVE;
+    const label = (t.id || t.ticker || '?').toUpperCase();
+    return `<button class="tab${isActive ? ' active' : ''}" data-id="${t.id}">${label}</button>`;
+  }).join('');
+  tabs.querySelectorAll('button.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      ACTIVE = btn.dataset.id;
+      LS.set('activeTicker', ACTIVE);
+      renderAll();
+    });
+  });
+}
+
+function renderHeader() {
+  const t = activeTicker();
+  if (!t) { $('headerSub').textContent = 'Europe/Warsaw'; return; }
+  const sched = (t.schedule || []).join(' · ');
+  const wkd = t.weekdaysOnly ? '' : ' · 24/7';
+  const name = t.name || t.id;
+  $('headerSub').textContent = `${name} (${(t.ticker||'').toUpperCase()}) · ${sched} · Europe/Warsaw${wkd}`;
+}
+
+function renderHistory() {
+  const t = activeTicker();
   const container = $('history');
-  const lastBySlot = (state && state.lastBySlot) || {};
-  const rows = SLOT_LABELS.map((slot) => {
+  if (!t) {
+    container.innerHTML = '<div class="hint" style="text-align:center;padding:16px 0">Brak konfiguracji.</div>';
+    return;
+  }
+  const ts = (STATE && STATE.tickers && STATE.tickers[t.id]) || {};
+  const lastBySlot = ts.lastBySlot || {};
+  const slots = t.schedule || [];
+  if (slots.length === 0) {
+    container.innerHTML = '<div class="hint" style="text-align:center;padding:16px 0">Brak slotów w konfigu.</div>';
+    return;
+  }
+  const cur = (t.currency || '').toUpperCase();
+  container.innerHTML = slots.map(slot => {
     const e = lastBySlot[slot];
     if (!e) {
       return `<div class="slot-row">
@@ -359,24 +440,32 @@ function renderHistory(state) {
         <span></span>
       </div>`;
     }
-    const close = Number(e.close).toFixed(2);
-    const meta = fmtPriceTime(e.checkedAt);
     return `<div class="slot-row">
       <span class="slot-time">${slot}</span>
-      <span class="slot-price">${close} <span style="font-size:13px;color:var(--muted);font-weight:500">PLN</span></span>
-      <span class="slot-meta">${meta}</span>
+      <span class="slot-price">${fmtPrice(Number(e.close), cur)} <span style="font-size:13px;color:var(--muted);font-weight:500">${cur}</span></span>
+      <span class="slot-meta">${fmtPriceTime(e.checkedAt)}</span>
     </div>`;
-  });
-  container.innerHTML = rows.join('');
+  }).join('');
+}
+
+function renderThresholds() {
+  const t = activeTicker();
+  if (!t) return;
+  $('thresholdsTitle').textContent = `Progi cenowe (${(t.currency || '').toUpperCase()})`;
+  $('lower').value = (t.lower != null) ? t.lower : '';
+  $('upper').value = (t.upper != null) ? t.upper : '';
+}
+
+function renderAll() {
+  renderTabs();
+  renderHeader();
+  renderHistory();
+  renderThresholds();
 }
 
 async function refreshHistory() {
-  const data = await fetchHistory();
-  if (!data) {
-    $('history').innerHTML = '<div class="hint" style="text-align:center;padding:16px 0">Brak danych — pierwszy slot zapełni ją po 9:30/14:30/17:30.</div>';
-    return;
-  }
-  renderHistory(data);
+  STATE = await fetchState();
+  renderHistory();
 }
 
 // ---------- UI handlers ----------
@@ -384,8 +473,6 @@ function loadCreds() {
   $('repo').value  = LS.get('repo');
   $('pat').value   = LS.get('pat');
   $('vapid').value = LS.get('vapid');
-  $('lower').value = LS.get('lower');
-  $('upper').value = LS.get('upper');
 }
 
 $('saveCreds').addEventListener('click', () => {
@@ -406,6 +493,8 @@ $('saveCreds').addEventListener('click', () => {
 });
 
 $('saveCfg').addEventListener('click', async () => {
+  const t = activeTicker();
+  if (!t) { setStatus($('cfgStatus'), 'Brak aktywnego tickera.', 'err'); return; }
   const lower = parseFloat($('lower').value);
   const upper = parseFloat($('upper').value);
   if (!isFinite(lower) || !isFinite(upper)) {
@@ -414,26 +503,32 @@ $('saveCfg').addEventListener('click', async () => {
   if (lower >= upper) {
     setStatus($('cfgStatus'), 'Dolny próg musi być mniejszy od górnego.', 'err'); return;
   }
-  LS.set('lower', String(lower));
-  LS.set('upper', String(upper));
-
   try {
     const { owner, repo } = parseRepo($('repo').value || LS.get('repo'));
     const pat = sanitizeAscii($('pat').value || LS.get('pat'));
     validatePat(pat);
 
-    const cfg = {
-      ticker: 'OML',
-      currency: 'PLN',
-      lower, upper,
-      timezone: 'Europe/Warsaw',
-      schedule: ['09:30', '14:30', '17:30'],
-      weekdaysOnly: true,
-      updatedAt: new Date().toISOString()
-    };
+    // Pobierz świeży config z serwera (żeby nie nadpisać zmian z innego tickera)
+    setStatus($('cfgStatus'), 'Pobieram aktualny config…', 'warn');
+    const fresh = await fetchConfig();
+    if (!fresh || !Array.isArray(fresh.tickers)) throw new Error('Nieprawidłowy config na serwerze.');
+
+    // Podmień progi tylko dla aktywnego tickera
+    const idx = fresh.tickers.findIndex(x => x.id === t.id);
+    if (idx === -1) throw new Error(`Ticker ${t.id} nie istnieje w configu na serwerze.`);
+    fresh.tickers[idx].lower = lower;
+    fresh.tickers[idx].upper = upper;
+    fresh.updatedAt = new Date().toISOString();
+
     setStatus($('cfgStatus'), 'Zapisuję progi do repo…', 'warn');
-    await ghPutFile(owner, repo, 'data/config.json', pat, JSON.stringify(cfg, null, 2), `chore: update thresholds (${lower}/${upper})`);
-    setStatus($('cfgStatus'), `Zapisano: dolny ${lower} PLN, górny ${upper} PLN.`, 'ok');
+    await ghPutFile(owner, repo, 'data/config.json', pat,
+      JSON.stringify(fresh, null, 2),
+      `chore: update ${t.id} thresholds (${lower}/${upper})`);
+
+    CONFIG = fresh;
+    renderAll();
+    const cur = (t.currency || '').toUpperCase();
+    setStatus($('cfgStatus'), `Zapisano: dolny ${lower} ${cur}, górny ${upper} ${cur}.`, 'ok');
   } catch (e) {
     setStatus($('cfgStatus'), `Błąd: ${e.message}`, 'err');
   }
@@ -530,8 +625,16 @@ $('refreshHistory').addEventListener('click', refreshHistory);
   // Pierwsza wizyta (brak PAT) → otwórz ustawienia. Inaczej trzymaj zwinięte.
   setSettingsOpen(!LS.get('pat'));
 
-  // Pokaż historię ostatnich kursów
-  refreshHistory();
+  // Załaduj multi-ticker config + state, ustaw aktywną zakładkę
+  CONFIG = await fetchConfig();
+  STATE  = await fetchState();
+  if (CONFIG && Array.isArray(CONFIG.tickers) && CONFIG.tickers.length > 0) {
+    const saved = LS.get('activeTicker');
+    ACTIVE = (saved && CONFIG.tickers.some(t => t.id === saved))
+      ? saved
+      : CONFIG.tickers[0].id;
+  }
+  renderAll();
 
   if ('serviceWorker' in navigator) {
     try {

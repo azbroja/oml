@@ -1,14 +1,14 @@
-name: OML price check
+name: Price check (multi-ticker)
 
 on:
   workflow_dispatch:
   schedule:
-    # Co 10 minut w "okolicach" 9:30/14:30/17:30 Warsaw (czas letni/zimowy łącznie),
-    # tylko w dni robocze. GitHub Actions używa UTC.
-    # Zima (UTC+1): 8:30, 13:30, 16:30 UTC.
-    # Lato (UTC+2): 7:30, 12:30, 15:30 UTC.
-    # Skrypt sam dopasuje "slot" do strefy Europe/Warsaw.
-    - cron: '*/10 7-16 * * 1-5'
+    # GitHub Actions throttluje schedule na free planie (skipuje wiele ticków).
+    # Strategia: zagęszczamy cron co 5 min w wąskich oknach okołosłotowych.
+    # Sloty Warsaw: 9:30/9:35, 14:30/14:35, 17:30/17:35.
+    #   CEST (UTC+2): 7:30, 12:30, 15:30 UTC → tikrki w godzinach UTC 7,8,12,13,15,16.
+    #   CET  (UTC+1): 8:30, 13:30, 16:30 UTC → te same godziny pokrywają oba przypadki.
+    - cron: '*/5 7-8,12-13,15-16 * * *'
 
 permissions:
   contents: write   # workflow commituje data/last_run.json (dedupe)

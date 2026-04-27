@@ -1,14 +1,28 @@
 {
-  "ticker": "OML",
-  "currency": "PLN",
-  "lower": 2.86,
-  "upper": 3.06,
-  "timezone": "Europe/Warsaw",
-  "schedule": [
-    "09:30",
-    "14:30",
-    "17:30"
+  "tickers": [
+    {
+      "id": "oml",
+      "name": "One More Level",
+      "ticker": "oml",
+      "source": "stooq",
+      "currency": "PLN",
+      "lower": 2.86,
+      "upper": 3.06,
+      "schedule": ["09:30", "14:30", "17:30"],
+      "weekdaysOnly": true
+    },
+    {
+      "id": "btc",
+      "name": "Bitcoin",
+      "ticker": "btcusd",
+      "source": "stooq",
+      "currency": "USD",
+      "lower": 60000,
+      "upper": 80000,
+      "schedule": ["09:35", "14:35", "17:35"],
+      "weekdaysOnly": false
+    }
   ],
-  "weekdaysOnly": true,
-  "updatedAt": "2026-04-27T13:02:55.450Z"
+  "timezone": "Europe/Warsaw",
+  "updatedAt": "2026-04-27T13:30:00.000Z"
 }
