@@ -162,6 +162,27 @@ function utf8ToBase64(s) {
   return btoa(unescape(encodeURIComponent(s)));
 }
 
+// Czyści string z niedrukowalnych i nie-ASCII znaków (które ucinają fetch headers w iOS Safari).
+function sanitizeAscii(s) {
+  return (s || '').replace(/[^\x20-\x7E]/g, '').trim();
+}
+
+function validatePat(pat) {
+  if (!pat) throw new Error('Brak PAT — wklej go w sekcji „Połączenie z GitHub".');
+  if (!/^(github_pat_|ghp_|ghs_|gho_)[A-Za-z0-9_]+$/.test(pat)) {
+    throw new Error(`PAT wygląda dziwnie (długość ${pat.length}, początek "${pat.slice(0,6)}…"). Użyj fine-grained: zaczyna się od "github_pat_".`);
+  }
+}
+
+function buildAuthHeaders(pat, extra = {}) {
+  return {
+    'Authorization': `Bearer ${pat}`,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    ...extra
+  };
+}
+
 function getPill() { return $('pill'); }
 function setPill(on) {
   const p = getPill();
@@ -171,29 +192,27 @@ function setPill(on) {
 
 // ---------- GitHub API ----------
 async function ghGetFile(owner, repo, path, pat) {
-  const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' }
-  });
+  validatePat(pat);
+  const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
+  const r = await fetch(url, { headers: buildAuthHeaders(pat) });
   if (r.status === 404) return { sha: null, content: null };
   if (!r.ok) throw new Error(`GET ${path}: ${r.status} ${await r.text()}`);
   const j = await r.json();
-  return { sha: j.sha, content: atob(j.content.replace(/\n/g, '')) };
+  return { sha: j.sha, content: atob((j.content || '').replace(/\n/g, '')) };
 }
 
 async function ghPutFile(owner, repo, path, pat, contentStr, message) {
+  validatePat(pat);
   const existing = await ghGetFile(owner, repo, path, pat);
   const body = {
     message: message || `update ${path}`,
     content: utf8ToBase64(contentStr),
     ...(existing.sha ? { sha: existing.sha } : {})
   };
-  const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+  const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
+  const r = await fetch(url, {
     method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${pat}`,
-      'Accept': 'application/vnd.github+json',
-      'Content-Type': 'application/json'
-    },
+    headers: buildAuthHeaders(pat, { 'Content-Type': 'application/json' }),
     body: JSON.stringify(body)
   });
   if (!r.ok) throw new Error(`PUT ${path}: ${r.status} ${await r.text()}`);
@@ -201,8 +220,8 @@ async function ghPutFile(owner, repo, path, pat, contentStr, message) {
 }
 
 function parseRepo(s) {
-  const m = (s || '').trim().match(/^([^/]+)\/([^/]+?)(?:\.git)?$/);
-  if (!m) throw new Error('Nieprawidłowy format repo. Użyj owner/repo, np. azbroja/oml-pwa');
+  const m = sanitizeAscii(s).match(/^([A-Za-z0-9._-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?$/);
+  if (!m) throw new Error('Nieprawidłowy format repo. Użyj owner/repo, np. azbroja/oml');
   return { owner: m[1], repo: m[2] };
 }
 
@@ -249,10 +268,20 @@ function loadCreds() {
 }
 
 $('saveCreds').addEventListener('click', () => {
-  LS.set('repo',  $('repo').value.trim());
-  LS.set('pat',   $('pat').value.trim());
-  LS.set('vapid', $('vapid').value.trim());
-  setStatus($('pushStatus'), 'Zapisano lokalnie.', 'ok');
+  const repo  = sanitizeAscii($('repo').value);
+  const pat   = sanitizeAscii($('pat').value);
+  const vapid = sanitizeAscii($('vapid').value);
+  // odzwierciedl czyszczenie w polach (żeby było widać jak naprawdę zapisaliśmy)
+  $('repo').value  = repo;
+  $('pat').value   = pat;
+  $('vapid').value = vapid;
+  LS.set('repo',  repo);
+  LS.set('pat',   pat);
+  LS.set('vapid', vapid);
+  let msg = 'Zapisano lokalnie.';
+  try { if (pat) validatePat(pat); }
+  catch (e) { msg = `Zapisano, ale uwaga: ${e.message}`; }
+  setStatus($('pushStatus'), msg, pat ? 'ok' : 'warn');
 });
 
 $('saveCfg').addEventListener('click', async () => {
@@ -269,8 +298,8 @@ $('saveCfg').addEventListener('click', async () => {
 
   try {
     const { owner, repo } = parseRepo($('repo').value || LS.get('repo'));
-    const pat = ($('pat').value || LS.get('pat')).trim();
-    if (!pat) throw new Error('Brak PAT — uzupełnij w sekcji "Połączenie z GitHub".');
+    const pat = sanitizeAscii($('pat').value || LS.get('pat'));
+    validatePat(pat);
 
     const cfg = {
       ticker: 'OML',
@@ -295,15 +324,16 @@ $('enablePush').addEventListener('click', async () => {
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') throw new Error('Nie udzielono pozwolenia na powiadomienia.');
 
-    const vapid = ($('vapid').value || LS.get('vapid')).trim();
+    const vapid = sanitizeAscii($('vapid').value || LS.get('vapid'));
     if (!vapid) throw new Error('Wklej VAPID public key (sekcja "Połączenie z GitHub").');
+    if (vapid.length < 80) throw new Error(`VAPID public key wygląda na za krótki (${vapid.length} znaków, oczekiwane ~87).`);
 
     setStatus($('pushStatus'), 'Subskrybuję push w przeglądarce…', 'warn');
     const sub = await subscribePush(vapid);
 
     const { owner, repo } = parseRepo($('repo').value || LS.get('repo'));
-    const pat = ($('pat').value || LS.get('pat')).trim();
-    if (!pat) throw new Error('Brak PAT — uzupełnij w sekcji "Połączenie z GitHub".');
+    const pat = sanitizeAscii($('pat').value || LS.get('pat'));
+    validatePat(pat);
 
     setStatus($('pushStatus'), 'Zapisuję subskrypcję do repo…', 'warn');
     await ghPutFile(owner, repo, 'data/subscription.json', pat, JSON.stringify(subscriptionToJson(sub), null, 2), 'chore: update push subscription');
