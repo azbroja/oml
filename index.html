@@ -132,7 +132,7 @@
 <div class="card">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px">
     <h2 style="margin:0">Ostatnie kursy</h2>
-    <button id="refreshHistory" class="icon-btn" aria-label="Odśwież" style="width:32px;height:32px;border-radius:8px">
+    <button id="refreshHistory" class="icon-btn" aria-label="Odśwież widok" title="Odśwież widok" style="width:32px;height:32px;border-radius:8px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
         <polyline points="23 4 23 10 17 10"/>
         <polyline points="1 20 1 14 7 14"/>
@@ -143,6 +143,8 @@
   <div id="history">
     <div class="hint" style="text-align:center;padding:16px 0">Ładuję…</div>
   </div>
+  <button id="fetchNow" class="secondary" style="margin-top:14px">Pobierz świeży kurs</button>
+  <div id="fetchStatus" class="status warn" style="display:none"></div>
 </div>
 
 <div class="card">
@@ -472,6 +474,68 @@ async function refreshHistory() {
   STATE = await fetchState();
   renderHistory();
 }
+
+// ---------- "Pobierz świeży kurs" → repository_dispatch + polling ----------
+async function ghDispatchRefresh(owner, repo, pat) {
+  validatePat(pat);
+  const r = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/dispatches`, {
+    method: 'POST',
+    headers: buildAuthHeaders(pat, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ event_type: 'refresh' })
+  });
+  if (!r.ok) throw new Error(`POST /dispatches: ${r.status} ${await r.text()}`);
+  return true;
+}
+
+function lastCheckIso(state, tickerId) {
+  const ts = state && state.tickers && state.tickers[tickerId];
+  return (ts && ts.lastCheck) || null;
+}
+
+async function pollForFreshState(tickerId, prevIso, maxMs = 90000, intervalMs = 5000) {
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    await new Promise(r => setTimeout(r, intervalMs));
+    const fresh = await fetchState();
+    if (fresh && lastCheckIso(fresh, tickerId) && lastCheckIso(fresh, tickerId) !== prevIso) {
+      return fresh;
+    }
+  }
+  return null;
+}
+
+$('fetchNow').addEventListener('click', async () => {
+  const t = activeTicker();
+  if (!t) { setStatus($('fetchStatus'), 'Brak aktywnego tickera.', 'err'); return; }
+  try {
+    const { owner, repo } = parseRepo($('repo').value || LS.get('repo'));
+    const pat = sanitizeAscii($('pat').value || LS.get('pat'));
+    validatePat(pat);
+
+    const btn = $('fetchNow');
+    btn.disabled = true;
+    setStatus($('fetchStatus'), 'Wysyłam żądanie do GitHub Actions…', 'warn');
+    await ghDispatchRefresh(owner, repo, pat);
+
+    const prev = lastCheckIso(STATE, t.id);
+    setStatus($('fetchStatus'), 'Workflow startuje (~30 s) i pobiera kursy. Czekam na świeże dane…', 'warn');
+
+    const fresh = await pollForFreshState(t.id, prev);
+    if (fresh) {
+      STATE = fresh;
+      renderHistory();
+      setStatus($('fetchStatus'), 'Pobrano świeże kursy.', 'ok');
+    } else {
+      // mimo timeoutu — odśwież co mamy
+      await refreshHistory();
+      setStatus($('fetchStatus'), 'Workflow odpalony, ale dane nie wpadły w 90 s. Sprawdź Actions na GitHub.', 'warn');
+    }
+    btn.disabled = false;
+  } catch (e) {
+    setStatus($('fetchStatus'), `Błąd: ${e.message}`, 'err');
+    $('fetchNow').disabled = false;
+  }
+});
 
 // ---------- UI handlers ----------
 function loadCreds() {

@@ -2,6 +2,8 @@ name: Price check (multi-ticker)
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [refresh]
   schedule:
     # GitHub Actions throttluje schedule na free planie (skipuje wiele ticków).
     # Strategia: zagęszczamy cron co 5 min w wąskich oknach okołosłotowych.
@@ -40,7 +42,11 @@ jobs:
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_PUBLIC_KEY:  ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_SUBJECT:     ${{ secrets.VAPID_SUBJECT }}
-          FORCE_NOTIFY:      ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+          # BACKFILL: oba ręczne triggery (workflow_dispatch i repository_dispatch refresh)
+          # zaadresują ostatni minięty slot, jeśli akurat nie jesteśmy w slot window.
+          BACKFILL: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch') && 'true' || 'false' }}
+          # TEST_PUSH: tylko workflow_dispatch (testowe push) — refresh z PWA NIE wysyła testowych.
+          TEST_PUSH: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: python scripts/check_price.py
 
       - name: Commit state if changed

@@ -212,11 +212,11 @@ def build_message(t: dict, q: Quote) -> tuple[str, str, str] | None:
     return None
 
 
-def process_ticker(t: dict, now: datetime, force: bool, subscription: dict | None,
-                   state: dict) -> None:
+def process_ticker(t: dict, now: datetime, backfill: bool, test_push: bool,
+                   subscription: dict | None, state: dict) -> None:
     tid = t.get("id") or t.get("ticker", "?")
     slot = slot_for_ticker(now, t)
-    if slot is None and force:
+    if slot is None and backfill:
         slot = latest_past_slot_for_ticker(now, t)
     log(f"[{tid}] slot={slot}")
     if slot is None:
@@ -226,7 +226,7 @@ def process_ticker(t: dict, now: datetime, force: bool, subscription: dict | Non
     ts = tickers_state.setdefault(tid, {"lastBySlot": {}})
     today = now.date().isoformat()
     last_key = f"{today}@{slot}"
-    if ts.get("lastKey") == last_key and not force:
+    if ts.get("lastKey") == last_key and not (backfill or test_push):
         log(f"[{tid}] slot {last_key} już obsłużony")
         return
 
@@ -252,7 +252,7 @@ def process_ticker(t: dict, now: datetime, force: bool, subscription: dict | Non
     ts["lastClose"] = quote.close
 
     msg = build_message(t, quote)
-    should_push = msg is not None or (force and subscription)
+    should_push = msg is not None or (test_push and subscription)
     if not should_push:
         log(f"[{tid}] kurs w widełkach — push pominięty")
         return
@@ -289,8 +289,11 @@ def process_ticker(t: dict, now: datetime, force: bool, subscription: dict | Non
 
 def main() -> int:
     now = datetime.now(tz=WARSAW)
-    force = os.environ.get("FORCE_NOTIFY", "false").lower() == "true"
-    log(f"Warsaw now: {now.isoformat()}  force={force}")
+    # Backward-compat: FORCE_NOTIFY=true → backfill + test_push
+    legacy_force = os.environ.get("FORCE_NOTIFY", "false").lower() == "true"
+    backfill = legacy_force or os.environ.get("BACKFILL", "false").lower() == "true"
+    test_push = legacy_force or os.environ.get("TEST_PUSH", "false").lower() == "true"
+    log(f"Warsaw now: {now.isoformat()}  backfill={backfill}  test_push={test_push}")
 
     cfg = load_json(CFG_PATH, None)
     if not cfg:
@@ -313,7 +316,7 @@ def main() -> int:
 
     for t in tickers:
         try:
-            process_ticker(t, now, force, sub, state)
+            process_ticker(t, now, backfill, test_push, sub, state)
         except Exception as e:
             log(f"[{t.get('id', '?')}] BŁĄD: {e}")
 
