@@ -85,6 +85,16 @@
   }
   .icon-btn:hover, .icon-btn.active { color: var(--text); border-color: var(--accent); }
   .icon-btn svg { width: 18px; height: 18px; }
+  .slot-row {
+    display: grid; grid-template-columns: 64px 1fr auto;
+    align-items: baseline; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .slot-row:last-child { border-bottom: 0; }
+  .slot-time { font-weight: 600; font-size: 15px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .slot-price { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+  .slot-meta { font-size: 11px; color: var(--muted); }
+  .slot-empty { color: var(--muted); font-size: 13px; font-weight: 500; }
 </style>
 </head>
 <body>
@@ -102,6 +112,22 @@
     </button>
   </div>
 </header>
+
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px">
+    <h2 style="margin:0">Ostatnie kursy</h2>
+    <button id="refreshHistory" class="icon-btn" aria-label="Odśwież" style="width:32px;height:32px;border-radius:8px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+        <polyline points="23 4 23 10 17 10"/>
+        <polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+    </button>
+  </div>
+  <div id="history">
+    <div class="hint" style="text-align:center;padding:16px 0">Ładuję…</div>
+  </div>
+</div>
 
 <div class="card">
   <h2>Progi cenowe (PLN)</h2>
@@ -300,6 +326,59 @@ async function autoFetchVapid() {
   } catch (_) { return null; }
 }
 
+// ---------- history (ostatnie kursy) ----------
+const SLOT_LABELS = ['09:30', '14:30', '17:30'];
+
+function fmtPriceTime(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch (_) { return iso; }
+}
+
+async function fetchHistory() {
+  // Pobierz prosto z Pages tej samej domeny (cache-bust przez query string)
+  const url = `./data/last_run.json?t=${Date.now()}`;
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (_) { return null; }
+}
+
+function renderHistory(state) {
+  const container = $('history');
+  const lastBySlot = (state && state.lastBySlot) || {};
+  const rows = SLOT_LABELS.map((slot) => {
+    const e = lastBySlot[slot];
+    if (!e) {
+      return `<div class="slot-row">
+        <span class="slot-time">${slot}</span>
+        <span class="slot-empty">brak danych</span>
+        <span></span>
+      </div>`;
+    }
+    const close = Number(e.close).toFixed(2);
+    const meta = fmtPriceTime(e.checkedAt);
+    return `<div class="slot-row">
+      <span class="slot-time">${slot}</span>
+      <span class="slot-price">${close} <span style="font-size:13px;color:var(--muted);font-weight:500">PLN</span></span>
+      <span class="slot-meta">${meta}</span>
+    </div>`;
+  });
+  container.innerHTML = rows.join('');
+}
+
+async function refreshHistory() {
+  const data = await fetchHistory();
+  if (!data) {
+    $('history').innerHTML = '<div class="hint" style="text-align:center;padding:16px 0">Brak danych — pierwszy slot zapełni ją po 9:30/14:30/17:30.</div>';
+    return;
+  }
+  renderHistory(data);
+}
+
 // ---------- UI handlers ----------
 function loadCreds() {
   $('repo').value  = LS.get('repo');
@@ -430,6 +509,8 @@ $('toggleSettings').addEventListener('click', () => {
   setSettingsOpen(isHidden);
 });
 
+$('refreshHistory').addEventListener('click', refreshHistory);
+
 // ---------- init ----------
 (async function init() {
   loadCreds();
@@ -447,6 +528,9 @@ $('toggleSettings').addEventListener('click', () => {
 
   // Pierwsza wizyta (brak PAT) → otwórz ustawienia. Inaczej trzymaj zwinięte.
   setSettingsOpen(!LS.get('pat'));
+
+  // Pokaż historię ostatnich kursów
+  refreshHistory();
 
   if ('serviceWorker' in navigator) {
     try {

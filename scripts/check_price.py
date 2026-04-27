@@ -181,10 +181,22 @@ def main() -> int:
 
     log(f"Quote: {quote.symbol} close={quote.close} ({quote.date} {quote.time})  thresholds: {lower}/{upper}")
 
+    # Zaktualizuj historię "ostatni kurs per slot" (zawsze, niezależnie od alertu)
+    last_by_slot = state.setdefault("lastBySlot", {})
+    if slot in SLOTS:  # tylko dla realnych slotów; pomijamy "manual"
+        last_by_slot[slot] = {
+            "date": quote.date,
+            "time": quote.time,
+            "close": quote.close,
+            "open": quote.open_,
+            "high": quote.high,
+            "low": quote.low,
+            "checkedAt": now.isoformat(),
+        }
+
     msg = build_message(quote, lower, upper)
     if msg is None and not force:
         log("Kurs w widełkach — alert pominięty.")
-        # mimo wszystko zapisz state, żeby nie checkować ponownie w tym samym slocie
         state["lastKey"] = last_key
         state["lastCheck"] = now.isoformat()
         state["lastClose"] = quote.close
@@ -211,7 +223,6 @@ def main() -> int:
         log(f"Push wysłany: {title}")
     except WebPushException as e:
         log(f"WebPushException: {e}")
-        # 404/410 = subskrypcja wygasła; nie blokujemy workflow
         if hasattr(e, "response") and e.response is not None and e.response.status_code in (404, 410):
             log("Subskrypcja wygasła — wyczyść data/subscription.json i włącz powiadomienia w PWA ponownie.")
 

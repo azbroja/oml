@@ -2,7 +2,7 @@
 // - obsługuje przychodzące Web Push
 // - kliknięcie powiadomienia otwiera/aktywuje aplikację
 
-const CACHE_NAME = 'oml-alert-v4';
+const CACHE_NAME = 'oml-alert-v5';
 const PRECACHE = [
   './',
   './index.html',
@@ -26,17 +26,21 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // network-first dla index.html (żeby update PWA był szybki), cache-first dla reszty
   const req = event.request;
+  const url = new URL(req.url);
+
+  // network-first dla nawigacji (HTML), żeby update PWA był szybki
   if (req.mode === 'navigate') {
-    event.respondWith(
-      fetch(req).catch(() => caches.match('./index.html'))
-    );
+    event.respondWith(fetch(req).catch(() => caches.match('./index.html')));
     return;
   }
-  event.respondWith(
-    caches.match(req).then((res) => res || fetch(req))
-  );
+  // bez cache dla danych dynamicznych (last_run.json itp.) i klucza VAPID
+  if (url.pathname.includes('/data/') || url.pathname.endsWith('vapid-public-key.txt')) {
+    event.respondWith(fetch(req));
+    return;
+  }
+  // cache-first dla reszty (assety: ikony, sw, manifest)
+  event.respondWith(caches.match(req).then((res) => res || fetch(req)));
 });
 
 self.addEventListener('push', (event) => {
