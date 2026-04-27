@@ -146,7 +146,7 @@
   <div id="cfgStatus" class="status warn" style="display:none"></div>
 </div>
 
-<div class="card">
+<div id="notificationsCard" class="card hidden">
   <h2>Powiadomienia</h2>
   <button id="enablePush">Włącz powiadomienia push</button>
   <button id="disablePush" class="secondary">Wyłącz powiadomienia</button>
@@ -499,9 +499,10 @@ $('testPush').addEventListener('click', async () => {
 // ---------- settings toggle ----------
 function setSettingsOpen(open) {
   $('settingsCard').classList.toggle('hidden', !open);
+  $('notificationsCard').classList.toggle('hidden', !open);
   $('toggleSettings').classList.toggle('active', open);
   if (open) {
-    setTimeout(() => $('settingsCard').scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+    setTimeout(() => $('notificationsCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
 }
 $('toggleSettings').addEventListener('click', () => {

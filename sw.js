@@ -2,7 +2,7 @@
 // - obsługuje przychodzące Web Push
 // - kliknięcie powiadomienia otwiera/aktywuje aplikację
 
-const CACHE_NAME = 'oml-alert-v5';
+const CACHE_NAME = 'oml-alert-v6';
 const PRECACHE = [
   './',
   './index.html',
