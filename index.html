@@ -423,8 +423,13 @@ function renderHistory() {
     container.innerHTML = '<div class="hint" style="text-align:center;padding:16px 0">Brak konfiguracji.</div>';
     return;
   }
-  const ts = (STATE && STATE.tickers && STATE.tickers[t.id]) || {};
-  const lastBySlot = ts.lastBySlot || {};
+  let lastBySlot = {};
+  if (STATE && STATE.tickers && STATE.tickers[t.id] && STATE.tickers[t.id].lastBySlot) {
+    lastBySlot = STATE.tickers[t.id].lastBySlot;
+  } else if (STATE && STATE.lastBySlot && t.id === 'oml') {
+    // Backward-compat: stary płaski schemat = dane OML
+    lastBySlot = STATE.lastBySlot;
+  }
   const slots = t.schedule || [];
   if (slots.length === 0) {
     container.innerHTML = '<div class="hint" style="text-align:center;padding:16px 0">Brak slotów w konfigu.</div>';
