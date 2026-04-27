@@ -8,7 +8,11 @@
       "currency": "PLN",
       "lower": 2.86,
       "upper": 3.06,
-      "schedule": ["09:30", "14:30", "17:30"],
+      "schedule": [
+        "09:30",
+        "14:30",
+        "17:30"
+      ],
       "weekdaysOnly": true
     },
     {
@@ -19,10 +23,14 @@
       "currency": "USD",
       "lower": 60000,
       "upper": 80000,
-      "schedule": ["09:35", "14:35", "17:35"],
+      "schedule": [
+        "09:35",
+        "14:35",
+        "17:35"
+      ],
       "weekdaysOnly": false
     }
   ],
   "timezone": "Europe/Warsaw",
-  "updatedAt": "2026-04-27T13:30:00.000Z"
+  "updatedAt": "2026-04-27T18:35:31.675Z"
 }
