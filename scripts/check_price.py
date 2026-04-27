@@ -123,13 +123,25 @@ def send_push(subscription: dict, payload: dict) -> None:
     sub_claim = os.environ.get("VAPID_SUBJECT", "mailto:owner@example.com").strip()
     if not priv:
         raise RuntimeError("Brak VAPID_PRIVATE_KEY w zmiennych środowiskowych.")
-    webpush(
-        subscription_info=subscription,
-        data=json.dumps(payload),
-        vapid_private_key=priv,
-        vapid_claims={"sub": sub_claim},
-        ttl=3600,
-    )
+
+    # pywebpush.Vapid.from_string oczekuje albo ścieżki do pliku PEM,
+    # albo base64url(DER) — NIE akceptuje stringa PEM wprost.
+    # Najprostsze: zapis do tempfile i przekazanie ścieżki.
+    import tempfile
+    fd, pem_path = tempfile.mkstemp(suffix=".pem", text=True)
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(priv if priv.endswith("\n") else priv + "\n")
+        webpush(
+            subscription_info=subscription,
+            data=json.dumps(payload),
+            vapid_private_key=pem_path,
+            vapid_claims={"sub": sub_claim},
+            ttl=3600,
+        )
+    finally:
+        try: os.unlink(pem_path)
+        except OSError: pass
 
 
 def build_message(q: Quote, lower: float, upper: float) -> tuple[str, str, str] | None:
