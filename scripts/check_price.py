@@ -6,6 +6,8 @@ Multi-ticker price checker — odpalany przez GitHub Actions.
   progami, walutą, źródłem (stooq), opcją weekdaysOnly.
 - Dla każdego tickera: jeśli aktualny czas Europe/Warsaw mieści się w jednym
   z jego slotów (z tolerancją 30 min) — pobiera kurs i ewentualnie wysyła push.
+- Scheduled run może też nadrobić ostatni pominięty slot z bieżącego dnia,
+  jeśli GitHub opóźni lub pominie cron.
 - Workflow_dispatch (FORCE_NOTIFY=true) backfilluje najnowszy minięty slot dziś.
 - Stan zapisywany do data/last_run.json pod kluczem ticker.id.
 
@@ -120,6 +122,29 @@ def latest_past_slot_for_ticker(now: datetime, t: dict) -> str | None:
     return sorted(past)[-1][1]
 
 
+def latest_unprocessed_past_slot_for_ticker(now: datetime, t: dict, ts: dict) -> str | None:
+    if t.get("weekdaysOnly", True) and now.weekday() >= 5:
+        return None
+    today = now.date().isoformat()
+    last_by_slot = ts.get("lastBySlot", {})
+    past = []
+    for slot in t.get("schedule", []):
+        try:
+            hh, mm = map(int, slot.split(":"))
+        except ValueError:
+            continue
+        s = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+        if s > now:
+            continue
+        entry = last_by_slot.get(slot)
+        if entry and entry.get("checkedAt", "").startswith(today):
+            continue
+        past.append((s, slot))
+    if not past:
+        return None
+    return sorted(past)[-1][1]
+
+
 def fetch_quote_stooq(ticker: str) -> Quote | None:
     url = f"https://stooq.com/q/l/?s={ticker.lower()}&f=sd2t2ohlcv&h&e=csv"
     log(f"GET {url}")
@@ -213,17 +238,20 @@ def build_message(t: dict, q: Quote) -> tuple[str, str, str] | None:
 
 
 def process_ticker(t: dict, now: datetime, backfill: bool, test_push: bool,
-                   subscription: dict | None, state: dict) -> None:
+                   subscription: dict | None, state: dict,
+                   catch_up_missed_slots: bool) -> None:
     tid = t.get("id") or t.get("ticker", "?")
+    tickers_state = state.setdefault("tickers", {})
+    ts = tickers_state.setdefault(tid, {"lastBySlot": {}})
     slot = slot_for_ticker(now, t)
     if slot is None and backfill:
         slot = latest_past_slot_for_ticker(now, t)
+    if slot is None and catch_up_missed_slots:
+        slot = latest_unprocessed_past_slot_for_ticker(now, t, ts)
     log(f"[{tid}] slot={slot}")
     if slot is None:
         return
 
-    tickers_state = state.setdefault("tickers", {})
-    ts = tickers_state.setdefault(tid, {"lastBySlot": {}})
     today = now.date().isoformat()
     last_key = f"{today}@{slot}"
     if ts.get("lastKey") == last_key and not (backfill or test_push):
@@ -293,7 +321,11 @@ def main() -> int:
     legacy_force = os.environ.get("FORCE_NOTIFY", "false").lower() == "true"
     backfill = legacy_force or os.environ.get("BACKFILL", "false").lower() == "true"
     test_push = legacy_force or os.environ.get("TEST_PUSH", "false").lower() == "true"
-    log(f"Warsaw now: {now.isoformat()}  backfill={backfill}  test_push={test_push}")
+    catch_up_missed_slots = os.environ.get("CATCH_UP_MISSED_SLOTS", "false").lower() == "true"
+    log(
+        f"Warsaw now: {now.isoformat()}  backfill={backfill}  "
+        f"test_push={test_push}  catch_up_missed_slots={catch_up_missed_slots}"
+    )
 
     cfg = load_json(CFG_PATH, None)
     if not cfg:
@@ -316,7 +348,7 @@ def main() -> int:
 
     for t in tickers:
         try:
-            process_ticker(t, now, backfill, test_push, sub, state)
+            process_ticker(t, now, backfill, test_push, sub, state, catch_up_missed_slots)
         except Exception as e:
             log(f"[{t.get('id', '?')}] BŁĄD: {e}")
 

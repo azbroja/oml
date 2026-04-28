@@ -42,6 +42,9 @@ jobs:
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_PUBLIC_KEY:  ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_SUBJECT:     ${{ secrets.VAPID_SUBJECT }}
+          # Schedule też nadrabia ostatni brakujący slot z bieżącego dnia,
+          # jeśli GitHub opóźni albo pominie któryś tick crona.
+          CATCH_UP_MISSED_SLOTS: ${{ github.event_name == 'schedule' && 'true' || 'false' }}
           # BACKFILL: oba ręczne triggery (workflow_dispatch i repository_dispatch refresh)
           # zaadresują ostatni minięty slot, jeśli akurat nie jesteśmy w slot window.
           BACKFILL: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch') && 'true' || 'false' }}
