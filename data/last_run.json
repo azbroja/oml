@@ -25,16 +25,25 @@
           "high": 2.95,
           "low": 2.83,
           "checkedAt": "2026-04-27T20:45:54.787011+02:00"
+        },
+        "09:30": {
+          "date": "2026-04-28",
+          "time": "09:44:15",
+          "close": 2.84,
+          "open": 2.84,
+          "high": 2.9,
+          "low": 2.84,
+          "checkedAt": "2026-04-28T10:01:27.704528+02:00"
         }
       },
-      "lastKey": "2026-04-27@17:30",
-      "lastCheck": "2026-04-27T20:45:54.787011+02:00",
-      "lastClose": 2.9,
+      "lastKey": "2026-04-28@09:30",
+      "lastCheck": "2026-04-28T10:01:27.704528+02:00",
+      "lastClose": 2.84,
       "lastAlert": {
-        "title": "OML 2.90 PLN",
-        "body": "Test: kurs w widełkach 2.86 PLN–3.06 PLN.",
-        "kind": "test",
-        "at": "2026-04-27T20:37:06.431974+02:00"
+        "title": "OML ↓ 2.84 PLN",
+        "body": "One More Level: spadek poniżej 2.86 PLN. Open 2.84 PLN, dzień: 2.84 PLN–2.90 PLN.",
+        "kind": "below",
+        "at": "2026-04-28T10:01:27.704528+02:00"
       }
     },
     "btc": {
@@ -47,11 +56,20 @@
           "high": 79496.9,
           "low": 76550.3,
           "checkedAt": "2026-04-27T20:45:54.787011+02:00"
+        },
+        "09:35": {
+          "date": "2026-04-28",
+          "time": "10:01:28",
+          "close": 76850.9,
+          "open": 76797.8,
+          "high": 77477.3,
+          "low": 76446.7,
+          "checkedAt": "2026-04-28T10:01:27.704528+02:00"
         }
       },
-      "lastKey": "2026-04-27@17:35",
-      "lastCheck": "2026-04-27T20:45:54.787011+02:00",
-      "lastClose": 76764.2,
+      "lastKey": "2026-04-28@09:35",
+      "lastCheck": "2026-04-28T10:01:27.704528+02:00",
+      "lastClose": 76850.9,
       "lastAlert": {
         "title": "BTC 76 744 USD",
         "body": "Test: kurs w widełkach 60 000 USD–80 000 USD.",
