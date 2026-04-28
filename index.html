@@ -95,6 +95,27 @@
   .slot-price { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .slot-meta { font-size: 11px; color: var(--muted); }
   .slot-empty { color: var(--muted); font-size: 13px; font-weight: 500; }
+  .chart-wrap {
+    margin-top: 16px; padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .chart-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    margin-bottom: 8px;
+  }
+  .chart-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+  .chart-range { font-size: 11px; color: var(--muted); }
+  .chart-svg { width: 100%; height: auto; display: block; }
+  .chart-grid { stroke: rgba(136,146,176,0.18); stroke-width: 1; }
+  .chart-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .chart-area { fill: url(#chartFill); }
+  .chart-point { fill: var(--accent); }
+  .chart-day { fill: var(--muted); font-size: 10px; }
+  .chart-price { fill: var(--muted); font-size: 10px; }
+  .chart-empty {
+    color: var(--muted); font-size: 12px;
+    text-align: center; padding: 12px 0 4px;
+  }
   .tabs {
     display: flex; gap: 6px; padding: 4px;
     background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
@@ -142,6 +163,9 @@
   </div>
   <div id="history">
     <div class="hint" style="text-align:center;padding:16px 0">Ładuję…</div>
+  </div>
+  <div id="historyChart" class="chart-wrap">
+    <div class="chart-empty">Ładuję wykres…</div>
   </div>
   <button id="fetchNow" class="secondary" style="margin-top:14px">Pobierz świeży kurs</button>
   <div id="fetchStatus" class="status warn" style="display:none"></div>
@@ -418,23 +442,57 @@ function renderHeader() {
   $('headerSub').textContent = `${name} (${(t.ticker||'').toUpperCase()}) · ${sched} · Europe/Warsaw${wkd}`;
 }
 
+function tickerState(t) {
+  if (!t || !STATE) return null;
+  if (STATE.tickers && STATE.tickers[t.id]) return STATE.tickers[t.id];
+  if (STATE.lastBySlot && t.id === 'oml') return STATE;
+  return null;
+}
+
+function historySeriesForTicker(t) {
+  const ts = tickerState(t);
+  if (!ts) return [];
+  const order = new Map((t.schedule || []).map((slot, idx) => [slot, idx]));
+  if (Array.isArray(ts.historyPoints) && ts.historyPoints.length > 0) {
+    return [...ts.historyPoints].sort((a, b) => {
+      const dayCmp = String(a.day || '').localeCompare(String(b.day || ''));
+      if (dayCmp !== 0) return dayCmp;
+      const slotCmp = (order.get(a.slot) ?? 999) - (order.get(b.slot) ?? 999);
+      if (slotCmp !== 0) return slotCmp;
+      return String(a.checkedAt || '').localeCompare(String(b.checkedAt || ''));
+    });
+  }
+  const lastBySlot = ts.lastBySlot || {};
+  return Object.entries(lastBySlot).map(([slot, e]) => ({
+    key: `${(e.checkedAt || '').slice(0, 10)}@${slot}`,
+    day: (e.checkedAt || '').slice(0, 10),
+    slot,
+    checkedAt: e.checkedAt,
+    close: Number(e.close)
+  })).sort((a, b) => {
+    const dayCmp = String(a.day || '').localeCompare(String(b.day || ''));
+    if (dayCmp !== 0) return dayCmp;
+    return (order.get(a.slot) ?? 999) - (order.get(b.slot) ?? 999);
+  });
+}
+
 function renderHistory() {
   const t = activeTicker();
   const container = $('history');
   if (!t) {
     container.innerHTML = '<div class="hint" style="text-align:center;padding:16px 0">Brak konfiguracji.</div>';
+    $('historyChart').innerHTML = '<div class="chart-empty">Brak danych do wykresu.</div>';
     return;
   }
   let lastBySlot = {};
-  if (STATE && STATE.tickers && STATE.tickers[t.id] && STATE.tickers[t.id].lastBySlot) {
-    lastBySlot = STATE.tickers[t.id].lastBySlot;
-  } else if (STATE && STATE.lastBySlot && t.id === 'oml') {
-    // Backward-compat: stary płaski schemat = dane OML
-    lastBySlot = STATE.lastBySlot;
+  const ts = tickerState(t);
+  if (ts && ts.lastBySlot) {
+    lastBySlot = ts.lastBySlot;
   }
   const slots = t.schedule || [];
   if (slots.length === 0) {
     container.innerHTML = '<div class="hint" style="text-align:center;padding:16px 0">Brak slotów w konfigu.</div>';
+    $('historyChart').innerHTML = '<div class="chart-empty">Brak slotów do wykresu.</div>';
     return;
   }
   const cur = (t.currency || '').toUpperCase();
@@ -453,6 +511,81 @@ function renderHistory() {
       <span class="slot-meta">${fmtPriceTime(e.checkedAt)}</span>
     </div>`;
   }).join('');
+  renderHistoryChart();
+}
+
+function renderHistoryChart() {
+  const t = activeTicker();
+  const container = $('historyChart');
+  if (!t) {
+    container.innerHTML = '<div class="chart-empty">Brak danych do wykresu.</div>';
+    return;
+  }
+  const series = historySeriesForTicker(t).filter(p => Number.isFinite(Number(p.close)));
+  if (series.length < 2) {
+    container.innerHTML = '<div class="chart-empty">Wykres pojawi się po zebraniu większej liczby punktów.</div>';
+    return;
+  }
+
+  const values = series.map(p => Number(p.close));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(max - min, Math.max(Math.abs(max) * 0.01, 0.01));
+  const bottom = min - range * 0.2;
+  const top = max + range * 0.2;
+  const width = 320;
+  const height = 132;
+  const padX = 8;
+  const padTop = 10;
+  const chartBottom = 98;
+  const step = series.length === 1 ? 0 : (width - padX * 2) / (series.length - 1);
+  const yFor = (value) => {
+    const ratio = (value - bottom) / (top - bottom || 1);
+    return chartBottom - ratio * (chartBottom - padTop);
+  };
+
+  const points = series.map((p, idx) => {
+    const x = padX + idx * step;
+    const y = yFor(Number(p.close));
+    return { ...p, x, y };
+  });
+  const line = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
+  const area = `${line} L ${points[points.length - 1].x.toFixed(2)} ${chartBottom} L ${points[0].x.toFixed(2)} ${chartBottom} Z`;
+
+  const dayMarks = [];
+  for (const p of points) {
+    if (!p.day || dayMarks.some(d => d.day === p.day)) continue;
+    dayMarks.push(p);
+  }
+  const dayLabels = dayMarks.map(p => {
+    const label = p.day.slice(5).replace('-', '.');
+    return `<text x="${p.x.toFixed(2)}" y="124" text-anchor="middle" class="chart-day">${label}</text>`;
+  }).join('');
+  const pointDots = points.map(p => `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="2.6" class="chart-point"></circle>`).join('');
+  const cur = (t.currency || '').toUpperCase();
+
+  container.innerHTML = `
+    <div class="chart-head">
+      <div class="chart-title">5 dni historii</div>
+      <div class="chart-range">${fmtPrice(min, cur)}-${fmtPrice(max, cur)} ${cur}</div>
+    </div>
+    <svg viewBox="0 0 ${width} ${height}" class="chart-svg" role="img" aria-label="Wykres kursu z ostatnich 5 dni">
+      <defs>
+        <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#5b8cff" stop-opacity="0.28"></stop>
+          <stop offset="100%" stop-color="#5b8cff" stop-opacity="0.02"></stop>
+        </linearGradient>
+      </defs>
+      <line x1="${padX}" y1="${padTop}" x2="${width - padX}" y2="${padTop}" class="chart-grid"></line>
+      <line x1="${padX}" y1="${(padTop + chartBottom) / 2}" x2="${width - padX}" y2="${(padTop + chartBottom) / 2}" class="chart-grid"></line>
+      <line x1="${padX}" y1="${chartBottom}" x2="${width - padX}" y2="${chartBottom}" class="chart-grid"></line>
+      <path d="${area}" class="chart-area"></path>
+      <path d="${line}" class="chart-line"></path>
+      ${pointDots}
+      <text x="${width - padX}" y="${padTop + 2}" text-anchor="end" class="chart-price">${fmtPrice(max, cur)} ${cur}</text>
+      <text x="${width - padX}" y="${chartBottom - 2}" text-anchor="end" class="chart-price">${fmtPrice(min, cur)} ${cur}</text>
+      ${dayLabels}
+    </svg>`;
 }
 
 function renderThresholds() {

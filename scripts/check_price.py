@@ -40,6 +40,7 @@ STATE_PATH = DATA / "last_run.json"
 
 WARSAW = ZoneInfo("Europe/Warsaw")
 TOLERANCE_MINUTES = 30  # GitHub Actions throttluje cron — daj zapas
+HISTORY_DAYS = 5
 
 
 @dataclass
@@ -218,6 +219,35 @@ def fmt_price(value: float, currency: str) -> str:
     return f"{value:.2f} {currency}"
 
 
+def update_history(ts: dict, slot: str, quote: Quote, now: datetime) -> None:
+    today = now.date().isoformat()
+    points = ts.setdefault("historyPoints", [])
+    key = f"{today}@{slot}"
+    point = {
+        "key": key,
+        "day": today,
+        "slot": slot,
+        "checkedAt": now.isoformat(),
+        "marketDate": quote.date,
+        "marketTime": quote.time,
+        "close": quote.close,
+        "open": quote.open_,
+        "high": quote.high,
+        "low": quote.low,
+    }
+    points = [p for p in points if p.get("key") != key]
+    points.append(point)
+    points.sort(key=lambda p: (p.get("day", ""), p.get("slot", ""), p.get("checkedAt", "")))
+
+    days = []
+    for p in reversed(points):
+        day = p.get("day")
+        if day and day not in days:
+            days.append(day)
+    keep_days = set(reversed(days[:HISTORY_DAYS]))
+    ts["historyPoints"] = [p for p in points if p.get("day") in keep_days]
+
+
 def build_message(t: dict, q: Quote) -> tuple[str, str, str] | None:
     """(title, body, kind) jeśli alert się należy, inaczej None."""
     name = t.get("name") or t.get("id") or t.get("ticker", "?")
@@ -275,6 +305,7 @@ def process_ticker(t: dict, now: datetime, backfill: bool, test_push: bool,
         "low": quote.low,
         "checkedAt": now.isoformat(),
     }
+    update_history(ts, slot, quote, now)
     ts["lastKey"] = last_key
     ts["lastCheck"] = now.isoformat()
     ts["lastClose"] = quote.close
