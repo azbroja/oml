@@ -12,7 +12,7 @@ Multi-ticker price checker — odpalany przez GitHub Actions.
 Wymagane zmienne środowiskowe (GitHub Secrets):
   VAPID_PRIVATE_KEY  — PEM
   VAPID_PUBLIC_KEY   — URL-safe base64 (informacyjnie)
-  VAPID_SUBJECT      — np. mailto:azbroja@outlook.com
+  VAPID_SUBJECT      — np. mailto:owner@example.com
   FORCE_NOTIFY       — "true" wymusza wysyłkę dla testów (workflow_dispatch)
 """
 from __future__ import annotations
