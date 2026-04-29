@@ -3,9 +3,9 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-04-29T16:31:31.102750+02:00",
+      "scrapedAt": "2026-04-29T16:37:43.406739+02:00",
       "marketDate": "2026-04-29",
-      "updatedAt": "2026-04-29T16:30:02+02:00",
+      "updatedAt": "2026-04-29T16:36:03+02:00",
       "delayMinutes": 15,
       "book": {
         "bids": [
@@ -457,10 +457,10 @@
         },
         "volumeSpike": null,
         "rollingImbalance5m": {
-          "points": 1,
-          "sum": 0.1533,
+          "points": 2,
+          "sum": 0.3066,
           "avg": 0.1533,
-          "cumulativeDelta": 2,
+          "cumulativeDelta": 4,
           "message": "buy pressure trend"
         }
       },
@@ -524,9 +524,21 @@
           "bookWallSide": "bid",
           "bookWallPrice": 2.7,
           "volumeSpikeRatio": null
+        },
+        {
+          "scrapedAt": "2026-04-29T16:37:43.406739+02:00",
+          "updatedAt": "2026-04-29T16:36:03+02:00",
+          "orderBookImbalance": 0.1533,
+          "pressureDominance5m": 1.0,
+          "cumulativeDelta5m": 2,
+          "totalVolume5m": 952,
+          "tradeCount5m": 3,
+          "bookWallSide": "bid",
+          "bookWallPrice": 2.7,
+          "volumeSpikeRatio": null
         }
       ]
     }
   },
-  "updatedAt": "2026-04-29T16:31:31.102750+02:00"
+  "updatedAt": "2026-04-29T16:37:43.406739+02:00"
 }
