@@ -164,6 +164,16 @@
   .micro-book-row strong, .micro-trade-row strong { font-size: 15px; font-variant-numeric: tabular-nums; }
   .micro-book-row.buy strong { color: var(--ok); }
   .micro-book-row.sell strong { color: #fca5a5; }
+  .micro-signal {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    background: rgba(11,16,32,0.28);
+  }
+  .micro-signal strong { display: block; font-size: 15px; margin-bottom: 3px; }
+  .micro-signal.buy strong { color: var(--ok); }
+  .micro-signal.sell strong { color: #fca5a5; }
+  .micro-signal.warn strong { color: var(--warn); }
   .micro-empty {
     color: var(--muted); font-size: 12px; text-align: center;
     padding: 8px 4px;
@@ -700,16 +710,42 @@ function renderMicro() {
   const latestTrades = micro.trades.latest || [];
   const metrics = micro.metrics || {};
   const pressure = micro.pressure1h || {};
+  const pressure5m = micro.pressure5m || {};
+  const signals = micro.signals || {};
+  const bookWall = signals.bookWall || null;
+  const volumeSpike = signals.volumeSpike || null;
+  const rollingImbalance = signals.rollingImbalance5m || null;
   const bestBid = bids[0];
   const bestAsk = asks[0];
   const imbalanceClass = (metrics.orderBookImbalance || 0) >= 0 ? 'buy' : 'sell';
   const pressureClass = (metrics.pressureDominance1h || 0) >= 0 ? 'buy' : 'sell';
+  const rollingClass = (rollingImbalance && (rollingImbalance.sum || 0) >= 0) ? 'buy' : 'sell';
   const avgTradeSize = metrics.avgTradeSize1h == null || isNaN(metrics.avgTradeSize1h)
     ? '—'
     : fmtInt(metrics.avgTradeSize1h);
 
   meta.textContent = `Źródło: graGieldowa.pl · dane opóźnione ok. ${micro.delayMinutes || 15} min · aktualizacja ${fmtPriceTime(micro.updatedAt)}`;
   content.innerHTML = `
+    <div class="micro-panel">
+      <div class="micro-head">
+        <div class="micro-title">Sygnały</div>
+        <div class="micro-sub">rolling 5 min</div>
+      </div>
+      <div class="micro-book">
+        <div class="micro-signal ${rollingClass}">
+          <strong>${rollingImbalance && rollingImbalance.message ? rollingImbalance.message : 'Brak trendu 5m'}</strong>
+          <span class="micro-sub">imbalance sum ${rollingImbalance ? fmtSignedPct(rollingImbalance.sum) : '—'} · cumulative delta ${rollingImbalance ? fmtInt(rollingImbalance.cumulativeDelta) : '—'}</span>
+        </div>
+        <div class="micro-signal ${bookWall ? (bookWall.side === 'bid' ? 'buy' : 'sell') : ''}">
+          <strong>${bookWall && bookWall.message ? bookWall.message : 'No bid/ask wall detected'}</strong>
+          <span class="micro-sub">${bookWall ? `wolumen ${fmtInt(bookWall.volume)} · ${fmtInt(bookWall.orders)} zleceń · x${bookWall.strengthVsMedian} mediany` : 'Brak ponadprzeciętnej ściany w top poziomach.'}</span>
+        </div>
+        <div class="micro-signal ${volumeSpike ? 'warn' : ''}">
+          <strong>${volumeSpike && volumeSpike.message ? volumeSpike.message : 'Volume spike not detected'}</strong>
+          <span class="micro-sub">${volumeSpike ? `5m volume ${fmtInt(volumeSpike.currentVolume)} vs mediana ${fmtInt(volumeSpike.baselineVolume)} · x${volumeSpike.ratio}` : `5m volume ${fmtInt(metrics.totalVolume5m)} · brak anomalii względem historii`}</span>
+        </div>
+      </div>
+    </div>
     <div class="micro-panel">
       <div class="micro-head">
         <div class="micro-title">Arkusz: buy vs sell</div>
@@ -795,6 +831,23 @@ function renderMicro() {
           <span class="micro-label">Avg trade size</span>
           <span class="micro-value">${avgTradeSize}</span>
           <span class="micro-sub">średni wolumen</span>
+        </div>
+      </div>
+      <div class="micro-kpi" style="margin-top:8px">
+        <div>
+          <span class="micro-label">5m cumulative delta</span>
+          <span class="micro-value">${fmtInt(metrics.cumulativeDelta5m)}</span>
+          <span class="micro-sub">uptick minus downtick</span>
+        </div>
+        <div>
+          <span class="micro-label">5m total volume</span>
+          <span class="micro-value">${fmtInt(metrics.totalVolume5m)}</span>
+          <span class="micro-sub">${fmtInt(metrics.tradeCount5m)} transakcji</span>
+        </div>
+        <div>
+          <span class="micro-label">5m dominance</span>
+          <span class="micro-value">${fmtSignedPct(metrics.pressureDominance5m)}</span>
+          <span class="micro-sub">${pressure5m.windowStart ? `${fmtPriceTime(pressure5m.windowStart)} - ${fmtPriceTime(pressure5m.windowEnd)}` : 'ostatnie 5 minut'}</span>
         </div>
       </div>
     </div>`;

@@ -25,6 +25,7 @@ import json
 import os
 import re
 import sys
+from statistics import median
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -48,6 +49,9 @@ MICRO_TIMEOUT = 20
 MICRO_BOOK_LEVELS = 12
 MICRO_TRADES_LIMIT = 25
 MICRO_DELAY_MINUTES = 15
+MICRO_HISTORY_POINTS = 72
+MICRO_VOLUME_SPIKE_MULTIPLIER = 2.5
+MICRO_VOLUME_SPIKE_MIN = 1500
 MICRO_SOURCES = {
     "oml": {
         "symbol": "OML",
@@ -417,8 +421,8 @@ def trade_to_dict(trade: MicroTrade) -> dict:
     }
 
 
-def summarize_pressure(trades: list[MicroTrade], latest_dt: datetime) -> dict:
-    window_start = latest_dt - timedelta(hours=1)
+def summarize_pressure(trades: list[MicroTrade], latest_dt: datetime, window: timedelta) -> dict:
+    window_start = latest_dt - window
     recent = [t for t in trades if datetime.fromisoformat(t.timestamp) >= window_start]
 
     uptick_volume = 0
@@ -463,11 +467,75 @@ def summarize_pressure(trades: list[MicroTrade], latest_dt: datetime) -> dict:
         "downtickVolume": downtick_volume,
         "flatVolume": flat_volume,
         "dominance": round(dominance, 4),
+        "cumulativeDelta": uptick_volume - downtick_volume,
         "latestTrades": [trade_to_dict(t) for t in recent[-MICRO_TRADES_LIMIT:]][::-1],
     }
 
 
-def build_micro_entry(ticker_id: str, now: datetime) -> dict:
+def build_book_wall_signal(side: str, levels: list[MicroLevel]) -> dict | None:
+    if len(levels) < 3:
+        return None
+    volumes = [level.volume for level in levels]
+    baseline = median(volumes)
+    strongest = max(levels, key=lambda level: level.volume)
+    if baseline <= 0 or strongest.volume < baseline * 3:
+        return None
+    return {
+        "side": side,
+        "price": strongest.price,
+        "volume": strongest.volume,
+        "orders": strongest.orders,
+        "strengthVsMedian": round(strongest.volume / baseline, 2),
+        "message": f"{side.upper()} wall detected at {strongest.price:.2f}",
+    }
+
+
+def build_volume_spike_signal(current_volume: int, prior_volumes: list[int]) -> dict | None:
+    prior = [v for v in prior_volumes if v > 0]
+    if len(prior) < 3 or current_volume < MICRO_VOLUME_SPIKE_MIN:
+        return None
+    baseline = median(prior)
+    if baseline <= 0:
+        return None
+    ratio = current_volume / baseline
+    if ratio < MICRO_VOLUME_SPIKE_MULTIPLIER:
+        return None
+    return {
+        "currentVolume": current_volume,
+        "baselineVolume": round(baseline, 2),
+        "ratio": round(ratio, 2),
+        "message": "abnormal volume detected",
+    }
+
+
+def snapshot_from_entry(entry: dict) -> dict:
+    metrics = entry.get("metrics", {})
+    signals = entry.get("signals", {})
+    book_wall = signals.get("bookWall") or {}
+    volume_spike = signals.get("volumeSpike") or {}
+    return {
+        "scrapedAt": entry.get("scrapedAt"),
+        "updatedAt": entry.get("updatedAt"),
+        "orderBookImbalance": metrics.get("orderBookImbalance"),
+        "pressureDominance5m": metrics.get("pressureDominance5m"),
+        "cumulativeDelta5m": metrics.get("cumulativeDelta5m"),
+        "totalVolume5m": metrics.get("totalVolume5m"),
+        "tradeCount5m": metrics.get("tradeCount5m"),
+        "bookWallSide": book_wall.get("side"),
+        "bookWallPrice": book_wall.get("price"),
+        "volumeSpikeRatio": volume_spike.get("ratio"),
+    }
+
+
+def merge_micro_history(previous: dict | None, entry: dict) -> list[dict]:
+    history = previous.get("snapshots", []) if isinstance(previous, dict) else []
+    history = [point for point in history if point.get("scrapedAt") != entry.get("scrapedAt")]
+    history.append(snapshot_from_entry(entry))
+    history.sort(key=lambda point: point.get("scrapedAt", ""))
+    return history[-MICRO_HISTORY_POINTS:]
+
+
+def build_micro_entry(ticker_id: str, now: datetime, previous: dict | None = None) -> dict:
     src = MICRO_SOURCES[ticker_id]
     book_soup = fetch_html(src["book_url"])
     trades_soup = fetch_html(src["trades_url"])
@@ -485,7 +553,8 @@ def build_micro_entry(ticker_id: str, now: datetime) -> dict:
         raise RuntimeError(f"Nie udało się sparsować transakcji dla {ticker_id}")
 
     latest_trade_dt = datetime.fromisoformat(trades[-1].timestamp)
-    pressure = summarize_pressure(trades, latest_trade_dt)
+    pressure_1h = summarize_pressure(trades, latest_trade_dt, timedelta(hours=1))
+    pressure_5m = summarize_pressure(trades, latest_trade_dt, timedelta(minutes=5))
 
     bid_volume_top = sum(l.volume for l in bids)
     ask_volume_top = sum(l.volume for l in asks)
@@ -495,8 +564,9 @@ def build_micro_entry(ticker_id: str, now: datetime) -> dict:
 
     best_bid = bids[0].price
     best_ask = asks[0].price
+    book_wall = build_book_wall_signal("bid", bids) or build_book_wall_signal("ask", asks)
 
-    return {
+    provisional_entry = {
         "symbol": src["symbol"],
         "source": "gragieldowa.pl",
         "scrapedAt": now.isoformat(),
@@ -518,16 +588,60 @@ def build_micro_entry(ticker_id: str, now: datetime) -> dict:
             "orderBookImbalance": round(imbalance, 4),
             "bidVolumeTop": bid_volume_top,
             "askVolumeTop": ask_volume_top,
-            "tradeCount1h": pressure["tradeCount"],
-            "avgTradeSize1h": pressure["avgTradeSize"],
-            "uptickVolume1h": pressure["uptickVolume"],
-            "downtickVolume1h": pressure["downtickVolume"],
-            "flatVolume1h": pressure["flatVolume"],
-            "pressureDominance1h": pressure["dominance"],
-            "totalVolume1h": pressure["totalVolume"],
+            "tradeCount1h": pressure_1h["tradeCount"],
+            "avgTradeSize1h": pressure_1h["avgTradeSize"],
+            "uptickVolume1h": pressure_1h["uptickVolume"],
+            "downtickVolume1h": pressure_1h["downtickVolume"],
+            "flatVolume1h": pressure_1h["flatVolume"],
+            "pressureDominance1h": pressure_1h["dominance"],
+            "totalVolume1h": pressure_1h["totalVolume"],
+            "tradeCount5m": pressure_5m["tradeCount"],
+            "avgTradeSize5m": pressure_5m["avgTradeSize"],
+            "uptickVolume5m": pressure_5m["uptickVolume"],
+            "downtickVolume5m": pressure_5m["downtickVolume"],
+            "pressureDominance5m": pressure_5m["dominance"],
+            "totalVolume5m": pressure_5m["totalVolume"],
+            "cumulativeDelta5m": pressure_5m["cumulativeDelta"],
         },
-        "pressure1h": pressure,
+        "pressure1h": pressure_1h,
+        "pressure5m": pressure_5m,
+        "signals": {
+            "bookWall": book_wall,
+            "volumeSpike": None,
+            "rollingImbalance5m": None,
+        },
     }
+
+    snapshots = merge_micro_history(previous, provisional_entry)
+    previous_5m_volumes = [int(point.get("totalVolume5m") or 0) for point in snapshots[:-1]]
+    volume_spike = build_volume_spike_signal(pressure_5m["totalVolume"], previous_5m_volumes)
+    recent_snapshots = [
+        point for point in snapshots
+        if point.get("scrapedAt")
+        and datetime.fromisoformat(point["scrapedAt"]) >= now - timedelta(minutes=25)
+    ]
+    rolling_imbalance = {
+        "points": len(recent_snapshots),
+        "sum": round(sum(float(point.get("orderBookImbalance") or 0.0) for point in recent_snapshots), 4),
+        "avg": round(
+            sum(float(point.get("orderBookImbalance") or 0.0) for point in recent_snapshots) / max(len(recent_snapshots), 1),
+            4,
+        ),
+        "cumulativeDelta": sum(int(point.get("cumulativeDelta5m") or 0) for point in recent_snapshots),
+    }
+    if recent_snapshots:
+        rolling_imbalance["message"] = (
+            "buy pressure trend"
+            if rolling_imbalance["sum"] > 0
+            else "sell pressure trend"
+            if rolling_imbalance["sum"] < 0
+            else "neutral pressure trend"
+        )
+
+    provisional_entry["signals"]["volumeSpike"] = volume_spike
+    provisional_entry["signals"]["rollingImbalance5m"] = rolling_imbalance
+    provisional_entry["snapshots"] = snapshots
+    return provisional_entry
 
 
 def refresh_market_micro(now: datetime) -> None:
@@ -538,7 +652,8 @@ def refresh_market_micro(now: datetime) -> None:
 
     for ticker_id in MICRO_SOURCES:
         try:
-            tickers[ticker_id] = build_micro_entry(ticker_id, now)
+            previous = tickers.get(ticker_id)
+            tickers[ticker_id] = build_micro_entry(ticker_id, now, previous)
             log(f"[{ticker_id}] market micro updated")
         except Exception as e:
             log(f"[{ticker_id}] market micro WARN: {e}")
