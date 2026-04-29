@@ -861,10 +861,23 @@ function renderAll() {
   renderMicro();
 }
 
-async function refreshHistory() {
-  STATE = await fetchState();
-  MICRO = await fetchMicro();
+async function syncRemoteState({ includeConfig = false } = {}) {
+  const [cfg, state, micro] = await Promise.all([
+    includeConfig ? fetchConfig() : Promise.resolve(CONFIG),
+    fetchState(),
+    fetchMicro(),
+  ]);
+  if (cfg) CONFIG = cfg;
+  if (state) STATE = state;
+  if (micro) MICRO = micro;
+  if (!ACTIVE && CONFIG && Array.isArray(CONFIG.tickers) && CONFIG.tickers.length > 0) {
+    ACTIVE = CONFIG.tickers[0].id;
+  }
   renderAll();
+}
+
+async function refreshHistory() {
+  await syncRemoteState();
 }
 
 // ---------- "Pobierz świeży kurs" → repository_dispatch + polling ----------
@@ -1069,6 +1082,24 @@ $('toggleSettings').addEventListener('click', () => {
 
 $('refreshHistory').addEventListener('click', refreshHistory);
 
+let autoRefreshHandle = null;
+
+function startAutoRefresh() {
+  if (autoRefreshHandle) clearInterval(autoRefreshHandle);
+  autoRefreshHandle = setInterval(() => {
+    if (document.hidden) return;
+    syncRemoteState().catch(() => {});
+  }, 60000);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) syncRemoteState().catch(() => {});
+});
+
+window.addEventListener('focus', () => {
+  syncRemoteState().catch(() => {});
+});
+
 // ---------- init ----------
 (async function init() {
   loadCreds();
@@ -1088,9 +1119,7 @@ $('refreshHistory').addEventListener('click', refreshHistory);
   setSettingsOpen(!LS.get('pat'));
 
   // Załaduj multi-ticker config + state, ustaw aktywną zakładkę
-  CONFIG = await fetchConfig();
-  STATE  = await fetchState();
-  MICRO  = await fetchMicro();
+  await syncRemoteState({ includeConfig: true });
   if (CONFIG && Array.isArray(CONFIG.tickers) && CONFIG.tickers.length > 0) {
     const saved = LS.get('activeTicker');
     ACTIVE = (saved && CONFIG.tickers.some(t => t.id === saved))
@@ -1098,6 +1127,7 @@ $('refreshHistory').addEventListener('click', refreshHistory);
       : CONFIG.tickers[0].id;
   }
   renderAll();
+  startAutoRefresh();
 
   if ('serviceWorker' in navigator) {
     try {
