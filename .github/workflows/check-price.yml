@@ -5,12 +5,10 @@ on:
   repository_dispatch:
     types: [refresh]
   schedule:
-    # GitHub Actions throttluje schedule na free planie (skipuje wiele ticków).
-    # Strategia: zagęszczamy cron co 5 min w wąskich oknach okołosłotowych.
-    # Sloty Warsaw: 9:30/9:35, 14:30/14:35, 17:30/17:35.
-    #   CEST (UTC+2): 7:30, 12:30, 15:30 UTC → tikrki w godzinach UTC 7,8,12,13,15,16.
-    #   CET  (UTC+1): 8:30, 13:30, 16:30 UTC → te same godziny pokrywają oba przypadki.
-    - cron: '*/5 7-8,12-13,15-16 * * *'
+    # GitHub Actions potrafi pomijać scheduled runy na free planie.
+    # Zamiast wąskich okien odpalamy checker co 5 minut przez całą sesję dzienną,
+    # a skrypt sam pilnuje slotów i deduplikacji.
+    - cron: '*/5 7-16 * * *'
 
 permissions:
   contents: write   # workflow commituje data/last_run.json (dedupe)
@@ -54,10 +52,10 @@ jobs:
 
       - name: Commit state if changed
         run: |
-          if [[ -n "$(git status --porcelain data/last_run.json)" ]]; then
+          if [[ -n "$(git status --porcelain data/last_run.json data/market_micro.json)" ]]; then
             git config user.name  "oml-bot"
             git config user.email "oml-bot@users.noreply.github.com"
-            git add data/last_run.json
-            git commit -m "chore: update last_run state"
+            git add data/last_run.json data/market_micro.json
+            git commit -m "chore: update market data"
             git push
           fi

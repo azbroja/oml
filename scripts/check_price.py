@@ -23,6 +23,7 @@ import csv
 import io
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -30,6 +31,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
+from bs4 import BeautifulSoup
 from pywebpush import webpush, WebPushException
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,10 +39,22 @@ DATA = ROOT / "data"
 CFG_PATH = DATA / "config.json"
 SUB_PATH = DATA / "subscription.json"
 STATE_PATH = DATA / "last_run.json"
+MICRO_PATH = DATA / "market_micro.json"
 
 WARSAW = ZoneInfo("Europe/Warsaw")
 TOLERANCE_MINUTES = 30  # GitHub Actions throttluje cron — daj zapas
 HISTORY_DAYS = 5
+MICRO_TIMEOUT = 20
+MICRO_BOOK_LEVELS = 12
+MICRO_TRADES_LIMIT = 25
+MICRO_DELAY_MINUTES = 15
+MICRO_SOURCES = {
+    "oml": {
+        "symbol": "OML",
+        "book_url": "https://gragieldowa.pl/spolka_arkusz_zl/spolka/oml",
+        "trades_url": "https://gragieldowa.pl/spolka_transakcje/spolka/oml",
+    }
+}
 
 
 @dataclass
@@ -53,6 +67,22 @@ class Quote:
     high: float
     low: float
     volume: int
+
+
+@dataclass
+class MicroTrade:
+    time: str
+    price: float
+    volume: int
+    timestamp: str
+
+
+@dataclass
+class MicroLevel:
+    price: float
+    volume: int
+    value: float
+    orders: int
 
 
 def log(msg: str) -> None:
@@ -217,6 +247,308 @@ def fmt_price(value: float, currency: str) -> str:
     if currency.upper() == "USD" and value >= 1000:
         return f"{value:,.0f} {currency}".replace(",", " ")
     return f"{value:.2f} {currency}"
+
+
+def normalize_ws(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").replace("\xa0", " ")).strip()
+
+
+def parse_pl_float(text: str) -> float:
+    cleaned = normalize_ws(text).replace(" ", "").replace(",", ".")
+    return float(cleaned)
+
+
+def parse_pl_int(text: str) -> int:
+    cleaned = normalize_ws(text).replace(" ", "").replace(",", "")
+    return int(cleaned)
+
+
+def fetch_html(url: str) -> BeautifulSoup:
+    log(f"GET {url}")
+    r = requests.get(url, timeout=MICRO_TIMEOUT, headers={"User-Agent": "multi-alert/1.0"})
+    r.raise_for_status()
+    return BeautifulSoup(r.text, "html.parser")
+
+
+def text_lines(text: str) -> list[str]:
+    return [normalize_ws(line) for line in text.splitlines() if normalize_ws(line)]
+
+
+def parse_book_table(soup: BeautifulSoup, table_id: str) -> list[MicroLevel]:
+    table = soup.find("table", id=table_id)
+    if table is None:
+        return []
+
+    levels: list[MicroLevel] = []
+    for row in table.select("tbody tr"):
+        cells = row.find_all("td")
+        if len(cells) < 4:
+            continue
+        try:
+            levels.append(MicroLevel(
+                price=parse_pl_float(cells[0].get_text(" ", strip=True)),
+                volume=parse_pl_int(cells[1].get("data-text") or cells[1].get_text(" ", strip=True)),
+                value=parse_pl_float(cells[2].get_text(" ", strip=True)),
+                orders=int(normalize_ws(cells[3].get_text(" ", strip=True))),
+            ))
+        except (TypeError, ValueError):
+            continue
+        if len(levels) >= MICRO_BOOK_LEVELS:
+            break
+    return levels
+
+
+def parse_book_updated_at_from_soup(soup: BeautifulSoup, now: datetime) -> datetime:
+    text = soup.get_text("\n")
+    lines = text_lines(text)
+    return parse_book_updated_at(lines, now)
+
+
+def parse_trades_table(soup: BeautifulSoup, trade_date) -> list[MicroTrade]:
+    table = None
+    for candidate in soup.find_all("table", class_="data maintable"):
+        headers = [normalize_ws(th.get_text(" ", strip=True)) for th in candidate.find_all("th")]
+        if {"Czas", "Kurs", "Wolumen"}.issubset(set(headers)):
+            table = candidate
+            break
+    if table is None:
+        return []
+
+    trades: list[MicroTrade] = []
+    for row in table.find_all("tr"):
+        cells = row.find_all("td")
+        if len(cells) != 4:
+            continue
+        time = normalize_ws(cells[1].get_text(" ", strip=True))
+        price_raw = normalize_ws(cells[2].get_text(" ", strip=True))
+        volume_raw = normalize_ws(cells[3].get_text(" ", strip=True))
+        if not re.match(r"^\d{2}:\d{2}:\d{2}$", time):
+            continue
+        try:
+            dt = datetime.strptime(f"{trade_date.isoformat()} {time}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=WARSAW)
+            trades.append(MicroTrade(
+                time=time,
+                price=float(price_raw),
+                volume=int(volume_raw),
+                timestamp=dt.isoformat(),
+            ))
+        except ValueError:
+            continue
+    trades.sort(key=lambda t: t.timestamp)
+    return trades
+
+
+def parse_book_updated_at(lines: list[str], now: datetime) -> datetime:
+    for line in lines:
+        m = re.search(r"Ostatnia aktualizacja:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})", line)
+        if m:
+            return datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S").replace(tzinfo=WARSAW)
+    return now
+
+
+def parse_book_side(lines: list[str], marker: str, stop_marker: str | None) -> list[MicroLevel]:
+    started = False
+    levels: list[MicroLevel] = []
+    pattern = re.compile(r"^(\d+[.,]\d+)\s+([\d ]+)\s+([\d ]+,\d+)\s+(\d+)\s+[\d.,]+\s*%$")
+
+    for line in lines:
+        if not started:
+            if marker in line:
+                started = True
+            continue
+        if stop_marker and stop_marker in line:
+            break
+        m = pattern.match(line)
+        if not m:
+            continue
+        levels.append(MicroLevel(
+            price=parse_pl_float(m.group(1)),
+            volume=parse_pl_int(m.group(2)),
+            value=parse_pl_float(m.group(3)),
+            orders=int(m.group(4)),
+        ))
+        if len(levels) >= MICRO_BOOK_LEVELS:
+            break
+    return levels
+
+
+def parse_trade_date(lines: list[str], now: datetime) -> datetime.date:
+    for line in lines:
+        m = re.search(r"(\d{4}-\d{2}-\d{2})", line)
+        if m:
+            return datetime.strptime(m.group(1), "%Y-%m-%d").date()
+    return now.date()
+
+
+def parse_trades(lines: list[str], trade_date) -> list[MicroTrade]:
+    trades: list[MicroTrade] = []
+    pattern = re.compile(r"^\d+\s+(\d{2}:\d{2}:\d{2})\s+(\d+[.,]\d+)\s+([\d ]+)$")
+
+    for line in lines:
+        m = pattern.match(line)
+        if not m:
+            continue
+        dt = datetime.strptime(f"{trade_date.isoformat()} {m.group(1)}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=WARSAW)
+        trades.append(MicroTrade(
+            time=m.group(1),
+            price=parse_pl_float(m.group(2)),
+            volume=parse_pl_int(m.group(3)),
+            timestamp=dt.isoformat(),
+        ))
+    trades.sort(key=lambda t: t.timestamp)
+    return trades
+
+
+def level_to_dict(level: MicroLevel) -> dict:
+    return {
+        "price": level.price,
+        "volume": level.volume,
+        "value": level.value,
+        "orders": level.orders,
+    }
+
+
+def trade_to_dict(trade: MicroTrade) -> dict:
+    return {
+        "time": trade.time,
+        "price": trade.price,
+        "volume": trade.volume,
+        "timestamp": trade.timestamp,
+    }
+
+
+def summarize_pressure(trades: list[MicroTrade], latest_dt: datetime) -> dict:
+    window_start = latest_dt - timedelta(hours=1)
+    recent = [t for t in trades if datetime.fromisoformat(t.timestamp) >= window_start]
+
+    uptick_volume = 0
+    downtick_volume = 0
+    flat_volume = 0
+    previous_price = None
+    last_direction = 0
+
+    for trade in recent:
+        if previous_price is None:
+            flat_volume += trade.volume
+        elif trade.price > previous_price:
+            uptick_volume += trade.volume
+            last_direction = 1
+        elif trade.price < previous_price:
+            downtick_volume += trade.volume
+            last_direction = -1
+        else:
+            if last_direction > 0:
+                uptick_volume += trade.volume
+            elif last_direction < 0:
+                downtick_volume += trade.volume
+            else:
+                flat_volume += trade.volume
+        previous_price = trade.price
+
+    total_volume = sum(t.volume for t in recent)
+    trade_count = len(recent)
+    avg_trade_size = (total_volume / trade_count) if trade_count else 0.0
+    dominance = 0.0
+    directional_total = uptick_volume + downtick_volume
+    if directional_total > 0:
+        dominance = (uptick_volume - downtick_volume) / directional_total
+
+    return {
+        "windowStart": window_start.isoformat(),
+        "windowEnd": latest_dt.isoformat(),
+        "tradeCount": trade_count,
+        "totalVolume": total_volume,
+        "avgTradeSize": round(avg_trade_size, 2),
+        "uptickVolume": uptick_volume,
+        "downtickVolume": downtick_volume,
+        "flatVolume": flat_volume,
+        "dominance": round(dominance, 4),
+        "latestTrades": [trade_to_dict(t) for t in recent[-MICRO_TRADES_LIMIT:]][::-1],
+    }
+
+
+def build_micro_entry(ticker_id: str, now: datetime) -> dict:
+    src = MICRO_SOURCES[ticker_id]
+    book_soup = fetch_html(src["book_url"])
+    trades_soup = fetch_html(src["trades_url"])
+
+    updated_at = parse_book_updated_at_from_soup(book_soup, now)
+    bids = parse_book_table(book_soup, "arkusz_left")
+    asks = parse_book_table(book_soup, "arkusz_right")
+    if not bids or not asks:
+        raise RuntimeError(f"Nie udało się sparsować arkusza zleceń dla {ticker_id}")
+
+    trade_lines = text_lines(trades_soup.get_text("\n"))
+    trade_date = parse_trade_date(trade_lines, updated_at)
+    trades = parse_trades_table(trades_soup, trade_date)
+    if not trades:
+        raise RuntimeError(f"Nie udało się sparsować transakcji dla {ticker_id}")
+
+    latest_trade_dt = datetime.fromisoformat(trades[-1].timestamp)
+    pressure = summarize_pressure(trades, latest_trade_dt)
+
+    bid_volume_top = sum(l.volume for l in bids)
+    ask_volume_top = sum(l.volume for l in asks)
+    imbalance = 0.0
+    if bid_volume_top + ask_volume_top > 0:
+        imbalance = (bid_volume_top - ask_volume_top) / (bid_volume_top + ask_volume_top)
+
+    best_bid = bids[0].price
+    best_ask = asks[0].price
+
+    return {
+        "symbol": src["symbol"],
+        "source": "gragieldowa.pl",
+        "scrapedAt": now.isoformat(),
+        "marketDate": trade_date.isoformat(),
+        "updatedAt": updated_at.isoformat(),
+        "delayMinutes": MICRO_DELAY_MINUTES,
+        "book": {
+            "bids": [level_to_dict(level) for level in bids],
+            "asks": [level_to_dict(level) for level in asks],
+            "topBid": best_bid,
+            "topAsk": best_ask,
+            "spread": round(best_ask - best_bid, 4),
+        },
+        "trades": {
+            "latest": [trade_to_dict(t) for t in trades[-MICRO_TRADES_LIMIT:]][::-1],
+            "latestTimestamp": trades[-1].timestamp,
+        },
+        "metrics": {
+            "orderBookImbalance": round(imbalance, 4),
+            "bidVolumeTop": bid_volume_top,
+            "askVolumeTop": ask_volume_top,
+            "tradeCount1h": pressure["tradeCount"],
+            "avgTradeSize1h": pressure["avgTradeSize"],
+            "uptickVolume1h": pressure["uptickVolume"],
+            "downtickVolume1h": pressure["downtickVolume"],
+            "flatVolume1h": pressure["flatVolume"],
+            "pressureDominance1h": pressure["dominance"],
+            "totalVolume1h": pressure["totalVolume"],
+        },
+        "pressure1h": pressure,
+    }
+
+
+def refresh_market_micro(now: datetime) -> None:
+    current = load_json(MICRO_PATH, {})
+    if not isinstance(current, dict):
+        current = {}
+    tickers = current.setdefault("tickers", {})
+
+    for ticker_id in MICRO_SOURCES:
+        try:
+            tickers[ticker_id] = build_micro_entry(ticker_id, now)
+            log(f"[{ticker_id}] market micro updated")
+        except Exception as e:
+            log(f"[{ticker_id}] market micro WARN: {e}")
+            prev = tickers.get(ticker_id, {})
+            if isinstance(prev, dict):
+                prev["lastError"] = {"message": str(e), "at": now.isoformat()}
+                tickers[ticker_id] = prev
+
+    current["updatedAt"] = now.isoformat()
+    save_json(MICRO_PATH, current)
 
 
 def update_history(ts: dict, slot: str, quote: Quote, now: datetime) -> None:
@@ -384,6 +716,7 @@ def main() -> int:
             log(f"[{t.get('id', '?')}] BŁĄD: {e}")
 
     save_json(STATE_PATH, state)
+    refresh_market_micro(now)
     return 0
 
 

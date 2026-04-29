@@ -6,6 +6,7 @@ Aplikacja działa bez własnego backendu aplikacyjnego:
 - frontend to statyczne `index.html`,
 - harmonogram i logika sprawdzania cen lecą przez GitHub Actions,
 - stan zapisuje się w repo w `data/last_run.json`,
+- dane mikrostruktury OML zapisują się w `data/market_micro.json`,
 - subskrypcja Web Push trzymana jest w `data/subscription.json`.
 
 ## Co robi projekt
@@ -14,6 +15,8 @@ Aplikacja działa bez własnego backendu aplikacyjnego:
 - zapisuje ostatnie odczyty do PWA,
 - trzyma historię punktów z ostatnich 5 dni,
 - rysuje mały wykres liniowy pod listą kursów,
+- dla OML scrapuje arkusz zleceń i ostatnie transakcje,
+- liczy proste metryki mikrostruktury, np. `order book imbalance` i presję 1h,
 - wysyła push, gdy cena wyjdzie poza ustawione widełki,
 - pozwala ręcznie wywołać odświeżenie z poziomu PWA.
 
@@ -40,8 +43,9 @@ Przykład konfiguracji siedzi w `data/config.json`.
 1. GitHub Actions uruchamia `scripts/check_price.py` według crona.
 2. Skrypt pobiera kurs dla każdego tickera.
 3. Jeśli slot pasuje, zapisuje odczyt do `data/last_run.json`.
-4. Jeśli cena spadnie poniżej `lower` albo wzrośnie powyżej `upper`, wysyłany jest push.
-5. Frontend pobiera `config.json` i `last_run.json`, a potem pokazuje sloty, historię i wykres.
+4. Dla `OML` dodatkowo scrapuje arkusz zleceń i tabelę transakcji do `data/market_micro.json`.
+5. Frontend pobiera `config.json`, `last_run.json` i `market_micro.json`, a potem pokazuje sloty, historię, wykres i bloki mikrostruktury.
+6. Jeśli cena spadnie poniżej `lower` albo wzrośnie powyżej `upper`, wysyłany jest push.
 
 Projekt ma też mechanizm nadrabiania pominiętych slotów scheduled run, jeśli GitHub odpali cron z opóźnieniem.
 
@@ -53,6 +57,7 @@ Projekt ma też mechanizm nadrabiania pominiętych slotów scheduled run, jeśli
 ├── data/
 │   ├── config.json
 │   ├── last_run.json
+│   ├── market_micro.json
 │   └── subscription.json
 ├── icons/
 ├── index.html
@@ -102,6 +107,7 @@ Do wysyłki push lokalnie nadal potrzebne są poprawne zmienne środowiskowe VAP
 ## Ograniczenia
 
 - obecne źródło danych jest skonfigurowane pod bieżący fetch w skrypcie,
+- mikrostruktura OML pochodzi ze scrapingu publicznej strony i jest opóźniona,
 - historia wykresu buduje się z zapisanych slotów, więc po świeżym wdrożeniu potrzebuje kilku przebiegów,
 - iOS potrafi mocno cache'ować ikonę PWA i manifest.
 

@@ -130,6 +130,47 @@
     text-transform: uppercase; letter-spacing: 0.04em;
   }
   .tab.active { background: var(--accent); color: white; }
+  .micro-grid { display: grid; gap: 12px; }
+  .micro-panel {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .micro-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .micro-title {
+    font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+  }
+  .micro-kpi {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .micro-kpi div, .micro-book-row, .micro-trade-row {
+    background: rgba(11,16,32,0.28);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .micro-label { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+  .micro-value { display: block; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+  .micro-sub { color: var(--muted); font-size: 11px; }
+  .micro-book, .micro-trades { display: grid; gap: 8px; }
+  .micro-book-row, .micro-trade-row {
+    display: grid; gap: 8px; align-items: baseline;
+  }
+  .micro-book-row { grid-template-columns: 1.1fr 1fr 1fr; }
+  .micro-trade-row { grid-template-columns: 72px 1fr 1fr; }
+  .micro-book-row strong, .micro-trade-row strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .micro-book-row.buy strong { color: var(--ok); }
+  .micro-book-row.sell strong { color: #fca5a5; }
+  .micro-empty {
+    color: var(--muted); font-size: 12px; text-align: center;
+    padding: 8px 4px;
+  }
+  @media (max-width: 420px) {
+    .micro-kpi { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -186,6 +227,14 @@
   <p class="hint">Alert wyśle się, jeśli kurs spadnie <b>poniżej</b> dolnego LUB wzrośnie <b>powyżej</b> górnego progu.</p>
   <button id="saveCfg">Zapisz progi do repo</button>
   <div id="cfgStatus" class="status warn" style="display:none"></div>
+</div>
+
+<div id="microCard" class="card">
+  <h2>Mikrostruktura OML</h2>
+  <div id="microMeta" class="hint" style="margin-bottom:12px">Ładuję dane arkusza i transakcji…</div>
+  <div id="microContent" class="micro-grid">
+    <div class="micro-empty">Brak danych.</div>
+  </div>
 </div>
 
 <div id="notificationsCard" class="card hidden">
@@ -371,6 +420,7 @@ async function autoFetchVapid() {
 // ---------- multi-ticker state ----------
 let CONFIG = null;     // pełny config z serwera
 let STATE  = null;     // last_run.json
+let MICRO  = null;     // market_micro.json
 let ACTIVE = null;     // id aktywnego tickera
 
 function activeTicker() {
@@ -395,6 +445,17 @@ function fmtPriceTime(iso) {
   } catch (_) { return iso; }
 }
 
+function fmtInt(value) {
+  if (value == null || isNaN(value)) return '—';
+  return new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 }).format(value);
+}
+
+function fmtSignedPct(value) {
+  if (value == null || isNaN(value)) return '—';
+  const pct = value * 100;
+  return `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`;
+}
+
 async function fetchConfig() {
   try {
     const r = await fetch(`./data/config.json?t=${Date.now()}`, { cache: 'no-store' });
@@ -406,6 +467,14 @@ async function fetchConfig() {
 async function fetchState() {
   try {
     const r = await fetch(`./data/last_run.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (_) { return null; }
+}
+
+async function fetchMicro() {
+  try {
+    const r = await fetch(`./data/market_micro.json?t=${Date.now()}`, { cache: 'no-store' });
     if (!r.ok) return null;
     return await r.json();
   } catch (_) { return null; }
@@ -447,6 +516,11 @@ function tickerState(t) {
   if (STATE.tickers && STATE.tickers[t.id]) return STATE.tickers[t.id];
   if (STATE.lastBySlot && t.id === 'oml') return STATE;
   return null;
+}
+
+function microState(t) {
+  if (!t || !MICRO || !MICRO.tickers) return null;
+  return MICRO.tickers[t.id] || null;
 }
 
 function historySeriesForTicker(t) {
@@ -596,16 +670,148 @@ function renderThresholds() {
   $('upper').value = (t.upper != null) ? t.upper : '';
 }
 
+function renderMicro() {
+  const t = activeTicker();
+  const card = $('microCard');
+  const meta = $('microMeta');
+  const content = $('microContent');
+
+  if (!t) {
+    card.classList.add('hidden');
+    return;
+  }
+  card.classList.remove('hidden');
+
+  if (t.id !== 'oml') {
+    meta.textContent = 'Mikrostruktura jest na razie dostępna tylko dla OML.';
+    content.innerHTML = '<div class="micro-empty">Przełącz na OML, aby zobaczyć arkusz i transakcje.</div>';
+    return;
+  }
+
+  const micro = microState(t);
+  if (!micro || !micro.book || !micro.trades || !micro.metrics || !micro.pressure1h) {
+    meta.textContent = 'Scraper jeszcze nie zapisał danych albo ostatni odczyt się nie udał.';
+    content.innerHTML = '<div class="micro-empty">Brak danych mikrostruktury dla OML.</div>';
+    return;
+  }
+
+  const bids = micro.book.bids || [];
+  const asks = micro.book.asks || [];
+  const latestTrades = micro.trades.latest || [];
+  const metrics = micro.metrics || {};
+  const pressure = micro.pressure1h || {};
+  const bestBid = bids[0];
+  const bestAsk = asks[0];
+  const imbalanceClass = (metrics.orderBookImbalance || 0) >= 0 ? 'buy' : 'sell';
+  const pressureClass = (metrics.pressureDominance1h || 0) >= 0 ? 'buy' : 'sell';
+  const avgTradeSize = metrics.avgTradeSize1h == null || isNaN(metrics.avgTradeSize1h)
+    ? '—'
+    : fmtInt(metrics.avgTradeSize1h);
+
+  meta.textContent = `Źródło: graGieldowa.pl · dane opóźnione ok. ${micro.delayMinutes || 15} min · aktualizacja ${fmtPriceTime(micro.updatedAt)}`;
+  content.innerHTML = `
+    <div class="micro-panel">
+      <div class="micro-head">
+        <div class="micro-title">Arkusz: buy vs sell</div>
+        <div class="micro-sub">spread ${fmtPrice(micro.book.spread, 'PLN')} PLN</div>
+      </div>
+      <div class="micro-book">
+        <div class="micro-book-row buy">
+          <div>
+            <span class="micro-label">Najlepszy bid</span>
+            <strong>${bestBid ? fmtPrice(bestBid.price, 'PLN') : '—'} PLN</strong>
+          </div>
+          <div>
+            <span class="micro-label">Wolumen top ${bids.length}</span>
+            <strong>${fmtInt(metrics.bidVolumeTop)}</strong>
+          </div>
+          <div>
+            <span class="micro-label">Zlecenia</span>
+            <strong>${bestBid ? fmtInt(bestBid.orders) : '—'}</strong>
+          </div>
+        </div>
+        <div class="micro-book-row sell">
+          <div>
+            <span class="micro-label">Najlepszy ask</span>
+            <strong>${bestAsk ? fmtPrice(bestAsk.price, 'PLN') : '—'} PLN</strong>
+          </div>
+          <div>
+            <span class="micro-label">Wolumen top ${asks.length}</span>
+            <strong>${fmtInt(metrics.askVolumeTop)}</strong>
+          </div>
+          <div>
+            <span class="micro-label">Zlecenia</span>
+            <strong>${bestAsk ? fmtInt(bestAsk.orders) : '—'}</strong>
+          </div>
+        </div>
+        <div class="micro-book-row ${imbalanceClass}">
+          <div>
+            <span class="micro-label">Imbalance</span>
+            <strong>${fmtSignedPct(metrics.orderBookImbalance)}</strong>
+          </div>
+          <div>
+            <span class="micro-label">Top bid / ask</span>
+            <span class="micro-sub">${fmtInt(metrics.bidVolumeTop)} / ${fmtInt(metrics.askVolumeTop)}</span>
+          </div>
+          <div>
+            <span class="micro-label">Snapshot</span>
+            <span class="micro-sub">${fmtPriceTime(micro.scrapedAt)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="micro-panel">
+      <div class="micro-head">
+        <div class="micro-title">Ostatnie transakcje</div>
+        <div class="micro-sub">${fmtPriceTime(micro.trades.latestTimestamp)}</div>
+      </div>
+      <div class="micro-trades">
+        ${latestTrades.slice(0, 8).map(trade => `
+          <div class="micro-trade-row">
+            <div><span class="micro-label">Czas</span><strong>${trade.time}</strong></div>
+            <div><span class="micro-label">Kurs</span><strong>${fmtPrice(trade.price, 'PLN')} PLN</strong></div>
+            <div><span class="micro-label">Wolumen</span><strong>${fmtInt(trade.volume)}</strong></div>
+          </div>
+        `).join('') || '<div class="micro-empty">Brak ostatnich transakcji.</div>'}
+      </div>
+    </div>
+    <div class="micro-panel">
+      <div class="micro-head">
+        <div class="micro-title">Presja 1h</div>
+        <div class="micro-sub">${fmtPriceTime(pressure.windowStart)} - ${fmtPriceTime(pressure.windowEnd)}</div>
+      </div>
+      <div class="micro-kpi">
+        <div>
+          <span class="micro-label">Uptick / downtick</span>
+          <span class="micro-value">${fmtInt(metrics.uptickVolume1h)} / ${fmtInt(metrics.downtickVolume1h)}</span>
+          <span class="micro-sub ${pressureClass}">dominacja ${fmtSignedPct(metrics.pressureDominance1h)}</span>
+        </div>
+        <div>
+          <span class="micro-label">Trade count</span>
+          <span class="micro-value">${fmtInt(metrics.tradeCount1h)}</span>
+          <span class="micro-sub">z ostatniej godziny</span>
+        </div>
+        <div>
+          <span class="micro-label">Avg trade size</span>
+          <span class="micro-value">${avgTradeSize}</span>
+          <span class="micro-sub">średni wolumen</span>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderAll() {
   renderTabs();
   renderHeader();
   renderHistory();
   renderThresholds();
+  renderMicro();
 }
 
 async function refreshHistory() {
   STATE = await fetchState();
-  renderHistory();
+  MICRO = await fetchMicro();
+  renderAll();
 }
 
 // ---------- "Pobierz świeży kurs" → repository_dispatch + polling ----------
@@ -656,7 +862,8 @@ $('fetchNow').addEventListener('click', async () => {
     const fresh = await pollForFreshState(t.id, prev);
     if (fresh) {
       STATE = fresh;
-      renderHistory();
+      MICRO = await fetchMicro();
+      renderAll();
       setStatus($('fetchStatus'), 'Pobrano świeże kursy.', 'ok');
     } else {
       // mimo timeoutu — odśwież co mamy
@@ -830,6 +1037,7 @@ $('refreshHistory').addEventListener('click', refreshHistory);
   // Załaduj multi-ticker config + state, ustaw aktywną zakładkę
   CONFIG = await fetchConfig();
   STATE  = await fetchState();
+  MICRO  = await fetchMicro();
   if (CONFIG && Array.isArray(CONFIG.tickers) && CONFIG.tickers.length > 0) {
     const saved = LS.get('activeTicker');
     ACTIVE = (saved && CONFIG.tickers.some(t => t.id === saved))
