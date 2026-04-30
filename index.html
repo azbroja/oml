@@ -240,7 +240,15 @@
 </div>
 
 <div id="microCard" class="card">
-  <h2>Mikrostruktura OML</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px">
+    <h2 style="margin:0">Mikrostruktura OML</h2>
+    <button id="copyMicro" class="icon-btn" aria-label="Kopiuj dane do schowka" title="Kopiuj dane do schowka" style="width:32px;height:32px;border-radius:8px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+    </button>
+  </div>
   <div id="microMeta" class="hint" style="margin-bottom:12px">Ładuję dane arkusza i transakcji…</div>
   <div id="microContent" class="micro-grid">
     <div class="micro-empty">Brak danych.</div>
@@ -853,6 +861,101 @@ function renderMicro() {
     </div>`;
 }
 
+function buildMicroText() {
+  const t = activeTicker();
+  const micro = t ? microState(t) : null;
+  const ts = t ? tickerState(t) : null;
+  const lines = [];
+
+  const stamp = micro ? fmtPriceTime(micro.updatedAt) : new Date().toLocaleString('pl-PL');
+  lines.push(`OML Mikrostruktura – ${stamp} (opóźnienie ~${micro ? micro.delayMinutes || 15 : 15} min)`);
+  lines.push('');
+
+  if (ts && ts.lastBySlot && t && t.schedule) {
+    lines.push('=== OSTATNIE KURSY ===');
+    for (const slot of t.schedule) {
+      const e = ts.lastBySlot[slot];
+      if (e) {
+        const cur = (t.currency || 'PLN').toUpperCase();
+        lines.push(`${slot}: ${fmtPrice(Number(e.close), cur)} ${cur} (${fmtPriceTime(e.checkedAt)})`);
+      }
+    }
+    lines.push('');
+  }
+
+  if (!micro) {
+    lines.push('Brak danych mikrostruktury.');
+    return lines.join('\n');
+  }
+
+  const book = micro.book || {};
+  const bids = book.bids || [];
+  const asks = book.asks || [];
+  const metrics = micro.metrics || {};
+  const pressure = micro.pressure1h || {};
+  const pressure5m = micro.pressure5m || {};
+  const signals = micro.signals || {};
+  const bookWall = signals.bookWall || null;
+  const volumeSpike = signals.volumeSpike || null;
+  const rollingImbalance = signals.rollingImbalance5m || null;
+
+  lines.push('=== ARKUSZ ZLECEŃ ===');
+  lines.push(`Top bid: ${fmtPrice(book.topBid, 'PLN')} PLN | Top ask: ${fmtPrice(book.topAsk, 'PLN')} PLN | Spread: ${fmtPrice(book.spread, 'PLN')} PLN`);
+  lines.push(`Imbalance: ${fmtSignedPct(metrics.orderBookImbalance)} | Wolumen bid top ${bids.length}: ${fmtInt(metrics.bidVolumeTop)} | ask top ${asks.length}: ${fmtInt(metrics.askVolumeTop)}`);
+  lines.push('');
+  lines.push('Bids (kupno):');
+  for (const b of bids) {
+    lines.push(`  ${b.price.toFixed(2)}: ${fmtInt(b.volume)} szt (${b.orders} zlec, ${fmtInt(b.value)} PLN)`);
+  }
+  lines.push('Asks (sprzedaż):');
+  for (const a of asks) {
+    lines.push(`  ${a.price.toFixed(2)}: ${fmtInt(a.volume)} szt (${a.orders} zlec, ${fmtInt(a.value)} PLN)`);
+  }
+  lines.push('');
+
+  const latestTrades = (micro.trades && micro.trades.latest) || [];
+  if (latestTrades.length > 0) {
+    lines.push('=== OSTATNIE TRANSAKCJE ===');
+    for (const tr of latestTrades.slice(0, 10)) {
+      lines.push(`  ${tr.time}  ${fmtPrice(tr.price, 'PLN')} PLN  ${fmtInt(tr.volume)} szt`);
+    }
+    lines.push('');
+  }
+
+  lines.push(`=== PRESJA 1H (${fmtPriceTime(pressure.windowStart)} – ${fmtPriceTime(pressure.windowEnd)}) ===`);
+  lines.push(`Transakcji: ${fmtInt(metrics.tradeCount1h)} | Wolumen: ${fmtInt(metrics.totalVolume1h)} | Avg: ${fmtInt(metrics.avgTradeSize1h)}`);
+  lines.push(`Uptick: ${fmtInt(metrics.uptickVolume1h)} | Downtick: ${fmtInt(metrics.downtickVolume1h)} | Flat: ${fmtInt(metrics.flatVolume1h)}`);
+  lines.push(`Dominacja: ${fmtSignedPct(metrics.pressureDominance1h)} | Cumulative delta: ${fmtInt(pressure.cumulativeDelta)}`);
+  lines.push('');
+
+  const p5start = pressure5m.windowStart ? fmtPriceTime(pressure5m.windowStart) : '—';
+  const p5end   = pressure5m.windowEnd   ? fmtPriceTime(pressure5m.windowEnd)   : '—';
+  lines.push(`=== PRESJA 5M (${p5start} – ${p5end}) ===`);
+  lines.push(`Transakcji: ${fmtInt(metrics.tradeCount5m)} | Wolumen: ${fmtInt(metrics.totalVolume5m)} | Avg: ${fmtInt(metrics.avgTradeSize5m)}`);
+  lines.push(`Uptick: ${fmtInt(metrics.uptickVolume5m)} | Downtick: ${fmtInt(metrics.downtickVolume5m)}`);
+  lines.push(`Dominacja: ${fmtSignedPct(metrics.pressureDominance5m)} | Cumulative delta: ${fmtInt(metrics.cumulativeDelta5m)}`);
+  lines.push('');
+
+  lines.push('=== SYGNAŁY ===');
+  if (rollingImbalance) {
+    lines.push(`Rolling imbalance 5m: ${rollingImbalance.message || '—'} (sum ${fmtSignedPct(rollingImbalance.sum)}, cumDelta ${fmtInt(rollingImbalance.cumulativeDelta)})`);
+  } else {
+    lines.push('Rolling imbalance 5m: brak danych');
+  }
+  if (bookWall) {
+    lines.push(`Book wall: ${bookWall.message || '—'} (vol ${fmtInt(bookWall.volume)}, ${fmtInt(bookWall.orders)} zlec, x${bookWall.strengthVsMedian} mediany)`);
+  } else {
+    lines.push('Book wall: nie wykryto');
+  }
+  if (volumeSpike) {
+    lines.push(`Volume spike: ${volumeSpike.message || '—'} (5m vol ${fmtInt(volumeSpike.currentVolume)} vs mediana ${fmtInt(volumeSpike.baselineVolume)}, x${volumeSpike.ratio})`);
+  } else {
+    lines.push(`Volume spike: nie wykryto (5m vol ${fmtInt(metrics.totalVolume5m)})`);
+  }
+
+  return lines.join('\n');
+}
+
 function renderAll() {
   renderTabs();
   renderHeader();
@@ -1081,6 +1184,25 @@ $('toggleSettings').addEventListener('click', () => {
 });
 
 $('refreshHistory').addEventListener('click', refreshHistory);
+
+$('copyMicro').addEventListener('click', async () => {
+  const text = buildMicroText();
+  const btn = $('copyMicro');
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (_) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+  btn.style.color = 'var(--ok)';
+  btn.style.borderColor = 'var(--ok)';
+  setTimeout(() => { btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+});
 
 let autoRefreshHandle = null;
 
