@@ -1000,7 +1000,7 @@ function lastCheckIso(state, tickerId) {
   return (ts && ts.lastCheck) || null;
 }
 
-async function pollForFreshState(tickerId, prevIso, maxMs = 90000, intervalMs = 5000) {
+async function pollForFreshState(tickerId, prevIso, maxMs = 180000, intervalMs = 5000) {
   const start = Date.now();
   while (Date.now() - start < maxMs) {
     await new Promise(r => setTimeout(r, intervalMs));
@@ -1026,7 +1026,7 @@ $('fetchNow').addEventListener('click', async () => {
     await ghDispatchRefresh(owner, repo, pat);
 
     const prev = lastCheckIso(STATE, t.id);
-    setStatus($('fetchStatus'), 'Workflow startuje (~30 s) i pobiera kursy. Czekam na świeże dane…', 'warn');
+    setStatus($('fetchStatus'), 'Workflow startuje (~30 s) i pobiera kursy. Czekam na świeże dane (max 3 min)…', 'warn');
 
     const fresh = await pollForFreshState(t.id, prev);
     if (fresh) {
@@ -1037,7 +1037,7 @@ $('fetchNow').addEventListener('click', async () => {
     } else {
       // mimo timeoutu — odśwież co mamy
       await refreshHistory();
-      setStatus($('fetchStatus'), 'Workflow odpalony, ale dane nie wpadły w 90 s. Sprawdź Actions na GitHub.', 'warn');
+      setStatus($('fetchStatus'), 'Workflow odpalony, ale dane nie wpadły w 3 min. Pojawią się przy następnym auto-odświeżeniu.', 'warn');
     }
     btn.disabled = false;
   } catch (e) {
