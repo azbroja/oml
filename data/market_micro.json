@@ -3,35 +3,35 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-05-04T13:23:21.688274+02:00",
+      "scrapedAt": "2026-05-04T15:07:22.845694+02:00",
       "marketDate": "2026-05-04",
-      "updatedAt": "2026-05-04T13:22:02+02:00",
+      "updatedAt": "2026-05-04T15:06:02+02:00",
       "delayMinutes": 15,
       "book": {
         "bids": [
           {
             "price": 2.82,
-            "volume": 9446,
-            "value": 26637.72,
+            "volume": 1023,
+            "value": 2884.86,
             "orders": 3
           },
           {
             "price": 2.81,
-            "volume": 1300,
-            "value": 3653.0,
+            "volume": 2050,
+            "value": 5760.5,
             "orders": 2
           },
           {
             "price": 2.8,
-            "volume": 4057,
-            "value": 11359.6,
-            "orders": 4
+            "volume": 3730,
+            "value": 10444.0,
+            "orders": 3
           },
           {
             "price": 2.79,
-            "volume": 2758,
-            "value": 7694.82,
-            "orders": 2
+            "volume": 4797,
+            "value": 13383.63,
+            "orders": 3
           },
           {
             "price": 2.78,
@@ -41,9 +41,9 @@
           },
           {
             "price": 2.77,
-            "volume": 7623,
-            "value": 21115.71,
-            "orders": 5
+            "volume": 6720,
+            "value": 18614.4,
+            "orders": 4
           },
           {
             "price": 2.76,
@@ -53,9 +53,9 @@
           },
           {
             "price": 2.75,
-            "volume": 1400,
-            "value": 3850.0,
-            "orders": 4
+            "volume": 1727,
+            "value": 4749.25,
+            "orders": 5
           },
           {
             "price": 2.74,
@@ -84,40 +84,46 @@
         ],
         "asks": [
           {
+            "price": 2.84,
+            "volume": 890,
+            "value": 2527.6,
+            "orders": 3
+          },
+          {
+            "price": 2.85,
+            "volume": 7273,
+            "value": 20728.05,
+            "orders": 4
+          },
+          {
             "price": 2.87,
-            "volume": 3800,
-            "value": 10906.0,
-            "orders": 2
+            "volume": 7504,
+            "value": 21536.48,
+            "orders": 5
           },
           {
             "price": 2.88,
-            "volume": 2922,
-            "value": 8415.36,
-            "orders": 2
-          },
-          {
-            "price": 2.89,
-            "volume": 1316,
-            "value": 3803.24,
+            "volume": 2920,
+            "value": 8409.6,
             "orders": 2
           },
           {
             "price": 2.9,
-            "volume": 3896,
-            "value": 11298.4,
+            "volume": 3906,
+            "value": 11327.4,
             "orders": 4
           },
           {
             "price": 2.91,
-            "volume": 300,
-            "value": 873.0,
-            "orders": 1
+            "volume": 1700,
+            "value": 4947.0,
+            "orders": 2
           },
           {
             "price": 2.92,
-            "volume": 3419,
-            "value": 9983.48,
-            "orders": 2
+            "volume": 2826,
+            "value": 8251.92,
+            "orders": 3
           },
           {
             "price": 2.93,
@@ -148,17 +154,11 @@
             "volume": 300,
             "value": 891.0,
             "orders": 1
-          },
-          {
-            "price": 2.99,
-            "volume": 420,
-            "value": 1255.8,
-            "orders": 2
           }
         ],
         "topBid": 2.82,
-        "topAsk": 2.87,
-        "spread": 0.05
+        "topAsk": 2.84,
+        "spread": 0.02
       },
       "trades": {
         "latest": [
@@ -316,9 +316,9 @@
         "latestTimestamp": "2026-05-04T12:08:29+02:00"
       },
       "metrics": {
-        "orderBookImbalance": 0.0482,
-        "bidVolumeTop": 55680,
-        "askVolumeTop": 50559,
+        "orderBookImbalance": -0.1117,
+        "bidVolumeTop": 49143,
+        "askVolumeTop": 61505,
         "tradeCount1h": 39,
         "avgTradeSize1h": 998.64,
         "uptickVolume1h": 17022,
@@ -542,21 +542,21 @@
           "price": 2.73,
           "volume": 16338,
           "orders": 6,
-          "strengthVsMedian": 5.58,
+          "strengthVsMedian": 6.35,
           "message": "BID wall detected at 2.73"
         },
         "volumeSpike": {
           "currentVolume": 10500,
-          "baselineVolume": 1670,
-          "ratio": 6.29,
+          "baselineVolume": 1755.0,
+          "ratio": 5.98,
           "message": "abnormal volume detected"
         },
         "rollingImbalance5m": {
           "points": 1,
-          "sum": 0.0482,
-          "avg": 0.0482,
+          "sum": -0.1117,
+          "avg": -0.1117,
           "cumulativeDelta": 4500,
-          "message": "buy pressure trend"
+          "message": "sell pressure trend"
         }
       },
       "snapshots": [
@@ -799,9 +799,21 @@
           "bookWallSide": "bid",
           "bookWallPrice": 2.73,
           "volumeSpikeRatio": null
+        },
+        {
+          "scrapedAt": "2026-05-04T15:07:22.845694+02:00",
+          "updatedAt": "2026-05-04T15:06:02+02:00",
+          "orderBookImbalance": -0.1117,
+          "pressureDominance5m": 1.0,
+          "cumulativeDelta5m": 4500,
+          "totalVolume5m": 10500,
+          "tradeCount5m": 4,
+          "bookWallSide": "bid",
+          "bookWallPrice": 2.73,
+          "volumeSpikeRatio": null
         }
       ]
     }
   },
-  "updatedAt": "2026-05-04T13:23:21.688274+02:00"
+  "updatedAt": "2026-05-04T15:07:22.845694+02:00"
 }
