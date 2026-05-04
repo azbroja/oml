@@ -3,65 +3,59 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-05-04T15:07:22.845694+02:00",
+      "scrapedAt": "2026-05-04T17:20:59.056500+02:00",
       "marketDate": "2026-05-04",
-      "updatedAt": "2026-05-04T15:06:02+02:00",
+      "updatedAt": "2026-05-04T17:20:02+02:00",
       "delayMinutes": 15,
       "book": {
         "bids": [
           {
-            "price": 2.82,
-            "volume": 1023,
-            "value": 2884.86,
-            "orders": 3
-          },
-          {
             "price": 2.81,
-            "volume": 2050,
-            "value": 5760.5,
-            "orders": 2
+            "volume": 504,
+            "value": 1416.24,
+            "orders": 1
           },
           {
             "price": 2.8,
-            "volume": 3730,
-            "value": 10444.0,
-            "orders": 3
-          },
-          {
-            "price": 2.79,
-            "volume": 4797,
-            "value": 13383.63,
-            "orders": 3
-          },
-          {
-            "price": 2.78,
-            "volume": 3098,
-            "value": 8612.44,
-            "orders": 2
-          },
-          {
-            "price": 2.77,
-            "volume": 6720,
-            "value": 18614.4,
+            "volume": 3855,
+            "value": 10794.0,
             "orders": 4
           },
           {
-            "price": 2.76,
-            "volume": 5341,
-            "value": 14741.16,
+            "price": 2.79,
+            "volume": 2758,
+            "value": 7694.82,
+            "orders": 2
+          },
+          {
+            "price": 2.78,
+            "volume": 3425,
+            "value": 9521.5,
+            "orders": 3
+          },
+          {
+            "price": 2.77,
+            "volume": 6723,
+            "value": 18622.71,
             "orders": 5
+          },
+          {
+            "price": 2.76,
+            "volume": 2605,
+            "value": 7189.8,
+            "orders": 4
           },
           {
             "price": 2.75,
-            "volume": 1727,
-            "value": 4749.25,
-            "orders": 5
+            "volume": 1400,
+            "value": 3850.0,
+            "orders": 4
           },
           {
             "price": 2.74,
-            "volume": 1519,
-            "value": 4162.06,
-            "orders": 3
+            "volume": 4275,
+            "value": 11713.5,
+            "orders": 4
           },
           {
             "price": 2.73,
@@ -71,98 +65,224 @@
           },
           {
             "price": 2.72,
-            "volume": 800,
-            "value": 2176.0,
-            "orders": 1
+            "volume": 1600,
+            "value": 4352.0,
+            "orders": 2
           },
           {
             "price": 2.71,
             "volume": 2000,
             "value": 5420.0,
             "orders": 2
+          },
+          {
+            "price": 2.7,
+            "volume": 14467,
+            "value": 39060.9,
+            "orders": 9
           }
         ],
         "asks": [
           {
+            "price": 2.82,
+            "volume": 4912,
+            "value": 13851.84,
+            "orders": 1
+          },
+          {
+            "price": 2.83,
+            "volume": 1000,
+            "value": 2830.0,
+            "orders": 1
+          },
+          {
             "price": 2.84,
-            "volume": 890,
-            "value": 2527.6,
+            "volume": 664,
+            "value": 1885.76,
             "orders": 3
           },
           {
             "price": 2.85,
-            "volume": 7273,
-            "value": 20728.05,
+            "volume": 1930,
+            "value": 5500.5,
             "orders": 4
           },
           {
+            "price": 2.86,
+            "volume": 4640,
+            "value": 13270.4,
+            "orders": 2
+          },
+          {
             "price": 2.87,
-            "volume": 7504,
-            "value": 21536.48,
-            "orders": 5
+            "volume": 300,
+            "value": 861.0,
+            "orders": 1
           },
           {
             "price": 2.88,
-            "volume": 2920,
-            "value": 8409.6,
+            "volume": 2700,
+            "value": 7776.0,
+            "orders": 3
+          },
+          {
+            "price": 2.89,
+            "volume": 1316,
+            "value": 3803.24,
             "orders": 2
           },
           {
             "price": 2.9,
-            "volume": 3906,
-            "value": 11327.4,
-            "orders": 4
+            "volume": 24376,
+            "value": 70690.4,
+            "orders": 7
           },
           {
             "price": 2.91,
-            "volume": 1700,
-            "value": 4947.0,
-            "orders": 2
+            "volume": 300,
+            "value": 873.0,
+            "orders": 1
           },
           {
             "price": 2.92,
-            "volume": 2826,
-            "value": 8251.92,
-            "orders": 3
-          },
-          {
-            "price": 2.93,
-            "volume": 6000,
-            "value": 17580.0,
-            "orders": 1
+            "volume": 3419,
+            "value": 9983.48,
+            "orders": 2
           },
           {
             "price": 2.94,
-            "volume": 9179,
-            "value": 26986.26,
-            "orders": 4
-          },
-          {
-            "price": 2.95,
-            "volume": 18707,
-            "value": 55185.65,
-            "orders": 4
-          },
-          {
-            "price": 2.96,
-            "volume": 300,
-            "value": 888.0,
-            "orders": 1
-          },
-          {
-            "price": 2.97,
-            "volume": 300,
-            "value": 891.0,
-            "orders": 1
+            "volume": 1179,
+            "value": 3466.26,
+            "orders": 3
           }
         ],
-        "topBid": 2.82,
-        "topAsk": 2.84,
-        "spread": 0.02
+        "topBid": 2.81,
+        "topAsk": 2.82,
+        "spread": 0.01
       },
       "trades": {
         "latest": [
           {
+            "time": "15:09:36",
+            "price": 2.82,
+            "volume": 4,
+            "timestamp": "2026-05-04T15:09:36+02:00"
+          },
+          {
+            "time": "15:06:50",
+            "price": 2.82,
+            "volume": 7,
+            "timestamp": "2026-05-04T15:06:50+02:00"
+          },
+          {
+            "time": "15:04:54",
+            "price": 2.82,
+            "volume": 400,
+            "timestamp": "2026-05-04T15:04:54+02:00"
+          },
+          {
+            "time": "14:55:11",
+            "price": 2.82,
+            "volume": 1418,
+            "timestamp": "2026-05-04T14:55:11+02:00"
+          },
+          {
+            "time": "14:33:45",
+            "price": 2.82,
+            "volume": 370,
+            "timestamp": "2026-05-04T14:33:45+02:00"
+          },
+          {
+            "time": "14:32:59",
+            "price": 2.82,
+            "volume": 7,
+            "timestamp": "2026-05-04T14:32:59+02:00"
+          },
+          {
+            "time": "14:12:07",
+            "price": 2.84,
+            "volume": 1003,
+            "timestamp": "2026-05-04T14:12:07+02:00"
+          },
+          {
+            "time": "14:12:07",
+            "price": 2.84,
+            "volume": 67,
+            "timestamp": "2026-05-04T14:12:07+02:00"
+          },
+          {
+            "time": "13:40:17",
+            "price": 2.84,
+            "volume": 150,
+            "timestamp": "2026-05-04T13:40:17+02:00"
+          },
+          {
+            "time": "13:06:03",
+            "price": 2.84,
+            "volume": 147,
+            "timestamp": "2026-05-04T13:06:03+02:00"
+          },
+          {
+            "time": "13:01:41",
+            "price": 2.84,
+            "volume": 1754,
+            "timestamp": "2026-05-04T13:01:41+02:00"
+          },
+          {
+            "time": "12:31:44",
+            "price": 2.84,
+            "volume": 50,
+            "timestamp": "2026-05-04T12:31:44+02:00"
+          },
+          {
+            "time": "12:31:44",
+            "price": 2.85,
+            "volume": 550,
+            "timestamp": "2026-05-04T12:31:44+02:00"
+          },
+          {
+            "time": "12:26:27",
+            "price": 2.81,
+            "volume": 1000,
+            "timestamp": "2026-05-04T12:26:27+02:00"
+          },
+          {
+            "time": "12:26:27",
+            "price": 2.81,
+            "volume": 300,
+            "timestamp": "2026-05-04T12:26:27+02:00"
+          },
+          {
+            "time": "12:24:54",
+            "price": 2.83,
+            "volume": 3500,
+            "timestamp": "2026-05-04T12:24:54+02:00"
+          },
+          {
+            "time": "12:16:55",
+            "price": 2.82,
+            "volume": 5060,
+            "timestamp": "2026-05-04T12:16:55+02:00"
+          },
+          {
+            "time": "12:16:55",
+            "price": 2.82,
+            "volume": 3500,
+            "timestamp": "2026-05-04T12:16:55+02:00"
+          },
+          {
+            "time": "12:16:55",
+            "price": 2.82,
+            "volume": 886,
+            "timestamp": "2026-05-04T12:16:55+02:00"
+          },
+          {
+            "time": "12:13:49",
+            "price": 2.87,
+            "volume": 8,
+            "timestamp": "2026-05-04T12:13:49+02:00"
+          },
+          {
             "time": "12:08:29",
             "price": 2.85,
             "volume": 1500,
@@ -191,348 +311,120 @@
             "price": 2.89,
             "volume": 34,
             "timestamp": "2026-05-04T12:01:13+02:00"
-          },
-          {
-            "time": "11:50:10",
-            "price": 2.89,
-            "volume": 1000,
-            "timestamp": "2026-05-04T11:50:10+02:00"
-          },
-          {
-            "time": "11:50:10",
-            "price": 2.89,
-            "volume": 950,
-            "timestamp": "2026-05-04T11:50:10+02:00"
-          },
-          {
-            "time": "11:40:16",
-            "price": 2.89,
-            "volume": 3110,
-            "timestamp": "2026-05-04T11:40:16+02:00"
-          },
-          {
-            "time": "11:38:23",
-            "price": 2.89,
-            "volume": 850,
-            "timestamp": "2026-05-04T11:38:23+02:00"
-          },
-          {
-            "time": "11:37:13",
-            "price": 2.89,
-            "volume": 540,
-            "timestamp": "2026-05-04T11:37:13+02:00"
-          },
-          {
-            "time": "11:35:17",
-            "price": 2.89,
-            "volume": 1000,
-            "timestamp": "2026-05-04T11:35:17+02:00"
-          },
-          {
-            "time": "11:34:26",
-            "price": 2.9,
-            "volume": 6,
-            "timestamp": "2026-05-04T11:34:26+02:00"
-          },
-          {
-            "time": "11:33:45",
-            "price": 2.9,
-            "volume": 4,
-            "timestamp": "2026-05-04T11:33:45+02:00"
-          },
-          {
-            "time": "11:33:41",
-            "price": 2.87,
-            "volume": 1775,
-            "timestamp": "2026-05-04T11:33:41+02:00"
-          },
-          {
-            "time": "11:33:41",
-            "price": 2.88,
-            "volume": 298,
-            "timestamp": "2026-05-04T11:33:41+02:00"
-          },
-          {
-            "time": "11:33:35",
-            "price": 2.87,
-            "volume": 570,
-            "timestamp": "2026-05-04T11:33:35+02:00"
-          },
-          {
-            "time": "11:33:26",
-            "price": 2.87,
-            "volume": 281,
-            "timestamp": "2026-05-04T11:33:26+02:00"
-          },
-          {
-            "time": "11:33:26",
-            "price": 2.87,
-            "volume": 50,
-            "timestamp": "2026-05-04T11:33:26+02:00"
-          },
-          {
-            "time": "11:33:26",
-            "price": 2.87,
-            "volume": 14,
-            "timestamp": "2026-05-04T11:33:26+02:00"
-          },
-          {
-            "time": "11:33:26",
-            "price": 2.87,
-            "volume": 2000,
-            "timestamp": "2026-05-04T11:33:26+02:00"
-          },
-          {
-            "time": "11:33:26",
-            "price": 2.87,
-            "volume": 2655,
-            "timestamp": "2026-05-04T11:33:26+02:00"
-          },
-          {
-            "time": "11:33:01",
-            "price": 2.85,
-            "volume": 788,
-            "timestamp": "2026-05-04T11:33:01+02:00"
-          },
-          {
-            "time": "11:33:01",
-            "price": 2.87,
-            "volume": 159,
-            "timestamp": "2026-05-04T11:33:01+02:00"
-          },
-          {
-            "time": "11:32:58",
-            "price": 2.85,
-            "volume": 1688,
-            "timestamp": "2026-05-04T11:32:58+02:00"
-          },
-          {
-            "time": "11:32:58",
-            "price": 2.85,
-            "volume": 212,
-            "timestamp": "2026-05-04T11:32:58+02:00"
           }
         ],
-        "latestTimestamp": "2026-05-04T12:08:29+02:00"
+        "latestTimestamp": "2026-05-04T15:09:36+02:00"
       },
       "metrics": {
-        "orderBookImbalance": -0.1117,
-        "bidVolumeTop": 49143,
-        "askVolumeTop": 61505,
-        "tradeCount1h": 39,
-        "avgTradeSize1h": 998.64,
-        "uptickVolume1h": 17022,
-        "downtickVolume1h": 21525,
-        "flatVolume1h": 400,
-        "pressureDominance1h": -0.1168,
-        "totalVolume1h": 38947,
-        "tradeCount5m": 4,
-        "avgTradeSize5m": 2625.0,
-        "uptickVolume5m": 4500,
+        "orderBookImbalance": 0.1239,
+        "bidVolumeTop": 59950,
+        "askVolumeTop": 46736,
+        "tradeCount1h": 8,
+        "avgTradeSize1h": 409.5,
+        "uptickVolume1h": 0,
+        "downtickVolume1h": 2206,
+        "flatVolume1h": 1070,
+        "pressureDominance1h": -1.0,
+        "totalVolume1h": 3276,
+        "tradeCount5m": 3,
+        "avgTradeSize5m": 137.0,
+        "uptickVolume5m": 0,
         "downtickVolume5m": 0,
-        "pressureDominance5m": 1.0,
-        "totalVolume5m": 10500,
-        "cumulativeDelta5m": 4500
+        "pressureDominance5m": 0.0,
+        "totalVolume5m": 411,
+        "cumulativeDelta5m": 0
       },
       "pressure1h": {
-        "windowStart": "2026-05-04T11:08:29+02:00",
-        "windowEnd": "2026-05-04T12:08:29+02:00",
-        "tradeCount": 39,
-        "totalVolume": 38947,
-        "avgTradeSize": 998.64,
-        "uptickVolume": 17022,
-        "downtickVolume": 21525,
-        "flatVolume": 400,
-        "dominance": -0.1168,
-        "cumulativeDelta": -4503,
+        "windowStart": "2026-05-04T14:09:36+02:00",
+        "windowEnd": "2026-05-04T15:09:36+02:00",
+        "tradeCount": 8,
+        "totalVolume": 3276,
+        "avgTradeSize": 409.5,
+        "uptickVolume": 0,
+        "downtickVolume": 2206,
+        "flatVolume": 1070,
+        "dominance": -1.0,
+        "cumulativeDelta": -2206,
         "latestTrades": [
           {
-            "time": "12:08:29",
-            "price": 2.85,
-            "volume": 1500,
-            "timestamp": "2026-05-04T12:08:29+02:00"
-          },
-          {
-            "time": "12:08:29",
-            "price": 2.85,
-            "volume": 2000,
-            "timestamp": "2026-05-04T12:08:29+02:00"
-          },
-          {
-            "time": "12:08:29",
-            "price": 2.85,
-            "volume": 1000,
-            "timestamp": "2026-05-04T12:08:29+02:00"
-          },
-          {
-            "time": "12:08:29",
-            "price": 2.84,
-            "volume": 6000,
-            "timestamp": "2026-05-04T12:08:29+02:00"
-          },
-          {
-            "time": "12:01:13",
-            "price": 2.89,
-            "volume": 34,
-            "timestamp": "2026-05-04T12:01:13+02:00"
-          },
-          {
-            "time": "11:50:10",
-            "price": 2.89,
-            "volume": 1000,
-            "timestamp": "2026-05-04T11:50:10+02:00"
-          },
-          {
-            "time": "11:50:10",
-            "price": 2.89,
-            "volume": 950,
-            "timestamp": "2026-05-04T11:50:10+02:00"
-          },
-          {
-            "time": "11:40:16",
-            "price": 2.89,
-            "volume": 3110,
-            "timestamp": "2026-05-04T11:40:16+02:00"
-          },
-          {
-            "time": "11:38:23",
-            "price": 2.89,
-            "volume": 850,
-            "timestamp": "2026-05-04T11:38:23+02:00"
-          },
-          {
-            "time": "11:37:13",
-            "price": 2.89,
-            "volume": 540,
-            "timestamp": "2026-05-04T11:37:13+02:00"
-          },
-          {
-            "time": "11:35:17",
-            "price": 2.89,
-            "volume": 1000,
-            "timestamp": "2026-05-04T11:35:17+02:00"
-          },
-          {
-            "time": "11:34:26",
-            "price": 2.9,
-            "volume": 6,
-            "timestamp": "2026-05-04T11:34:26+02:00"
-          },
-          {
-            "time": "11:33:45",
-            "price": 2.9,
+            "time": "15:09:36",
+            "price": 2.82,
             "volume": 4,
-            "timestamp": "2026-05-04T11:33:45+02:00"
+            "timestamp": "2026-05-04T15:09:36+02:00"
           },
           {
-            "time": "11:33:41",
-            "price": 2.87,
-            "volume": 1775,
-            "timestamp": "2026-05-04T11:33:41+02:00"
+            "time": "15:06:50",
+            "price": 2.82,
+            "volume": 7,
+            "timestamp": "2026-05-04T15:06:50+02:00"
           },
           {
-            "time": "11:33:41",
-            "price": 2.88,
-            "volume": 298,
-            "timestamp": "2026-05-04T11:33:41+02:00"
+            "time": "15:04:54",
+            "price": 2.82,
+            "volume": 400,
+            "timestamp": "2026-05-04T15:04:54+02:00"
           },
           {
-            "time": "11:33:35",
-            "price": 2.87,
-            "volume": 570,
-            "timestamp": "2026-05-04T11:33:35+02:00"
+            "time": "14:55:11",
+            "price": 2.82,
+            "volume": 1418,
+            "timestamp": "2026-05-04T14:55:11+02:00"
           },
           {
-            "time": "11:33:26",
-            "price": 2.87,
-            "volume": 281,
-            "timestamp": "2026-05-04T11:33:26+02:00"
+            "time": "14:33:45",
+            "price": 2.82,
+            "volume": 370,
+            "timestamp": "2026-05-04T14:33:45+02:00"
           },
           {
-            "time": "11:33:26",
-            "price": 2.87,
-            "volume": 50,
-            "timestamp": "2026-05-04T11:33:26+02:00"
+            "time": "14:32:59",
+            "price": 2.82,
+            "volume": 7,
+            "timestamp": "2026-05-04T14:32:59+02:00"
           },
           {
-            "time": "11:33:26",
-            "price": 2.87,
-            "volume": 14,
-            "timestamp": "2026-05-04T11:33:26+02:00"
+            "time": "14:12:07",
+            "price": 2.84,
+            "volume": 1003,
+            "timestamp": "2026-05-04T14:12:07+02:00"
           },
           {
-            "time": "11:33:26",
-            "price": 2.87,
-            "volume": 2000,
-            "timestamp": "2026-05-04T11:33:26+02:00"
-          },
-          {
-            "time": "11:33:26",
-            "price": 2.87,
-            "volume": 2655,
-            "timestamp": "2026-05-04T11:33:26+02:00"
-          },
-          {
-            "time": "11:33:01",
-            "price": 2.85,
-            "volume": 788,
-            "timestamp": "2026-05-04T11:33:01+02:00"
-          },
-          {
-            "time": "11:33:01",
-            "price": 2.87,
-            "volume": 159,
-            "timestamp": "2026-05-04T11:33:01+02:00"
-          },
-          {
-            "time": "11:32:58",
-            "price": 2.85,
-            "volume": 1688,
-            "timestamp": "2026-05-04T11:32:58+02:00"
-          },
-          {
-            "time": "11:32:58",
-            "price": 2.85,
-            "volume": 212,
-            "timestamp": "2026-05-04T11:32:58+02:00"
+            "time": "14:12:07",
+            "price": 2.84,
+            "volume": 67,
+            "timestamp": "2026-05-04T14:12:07+02:00"
           }
         ]
       },
       "pressure5m": {
-        "windowStart": "2026-05-04T12:03:29+02:00",
-        "windowEnd": "2026-05-04T12:08:29+02:00",
-        "tradeCount": 4,
-        "totalVolume": 10500,
-        "avgTradeSize": 2625.0,
-        "uptickVolume": 4500,
+        "windowStart": "2026-05-04T15:04:36+02:00",
+        "windowEnd": "2026-05-04T15:09:36+02:00",
+        "tradeCount": 3,
+        "totalVolume": 411,
+        "avgTradeSize": 137.0,
+        "uptickVolume": 0,
         "downtickVolume": 0,
-        "flatVolume": 6000,
-        "dominance": 1.0,
-        "cumulativeDelta": 4500,
+        "flatVolume": 411,
+        "dominance": 0.0,
+        "cumulativeDelta": 0,
         "latestTrades": [
           {
-            "time": "12:08:29",
-            "price": 2.85,
-            "volume": 1500,
-            "timestamp": "2026-05-04T12:08:29+02:00"
+            "time": "15:09:36",
+            "price": 2.82,
+            "volume": 4,
+            "timestamp": "2026-05-04T15:09:36+02:00"
           },
           {
-            "time": "12:08:29",
-            "price": 2.85,
-            "volume": 2000,
-            "timestamp": "2026-05-04T12:08:29+02:00"
+            "time": "15:06:50",
+            "price": 2.82,
+            "volume": 7,
+            "timestamp": "2026-05-04T15:06:50+02:00"
           },
           {
-            "time": "12:08:29",
-            "price": 2.85,
-            "volume": 1000,
-            "timestamp": "2026-05-04T12:08:29+02:00"
-          },
-          {
-            "time": "12:08:29",
-            "price": 2.84,
-            "volume": 6000,
-            "timestamp": "2026-05-04T12:08:29+02:00"
+            "time": "15:04:54",
+            "price": 2.82,
+            "volume": 400,
+            "timestamp": "2026-05-04T15:04:54+02:00"
           }
         ]
       },
@@ -542,21 +434,16 @@
           "price": 2.73,
           "volume": 16338,
           "orders": 6,
-          "strengthVsMedian": 6.35,
+          "strengthVsMedian": 5.28,
           "message": "BID wall detected at 2.73"
         },
-        "volumeSpike": {
-          "currentVolume": 10500,
-          "baselineVolume": 1755.0,
-          "ratio": 5.98,
-          "message": "abnormal volume detected"
-        },
+        "volumeSpike": null,
         "rollingImbalance5m": {
           "points": 1,
-          "sum": -0.1117,
-          "avg": -0.1117,
-          "cumulativeDelta": 4500,
-          "message": "sell pressure trend"
+          "sum": 0.1239,
+          "avg": 0.1239,
+          "cumulativeDelta": 0,
+          "message": "buy pressure trend"
         }
       },
       "snapshots": [
@@ -811,9 +698,21 @@
           "bookWallSide": "bid",
           "bookWallPrice": 2.73,
           "volumeSpikeRatio": null
+        },
+        {
+          "scrapedAt": "2026-05-04T17:20:59.056500+02:00",
+          "updatedAt": "2026-05-04T17:20:02+02:00",
+          "orderBookImbalance": 0.1239,
+          "pressureDominance5m": 0.0,
+          "cumulativeDelta5m": 0,
+          "totalVolume5m": 411,
+          "tradeCount5m": 3,
+          "bookWallSide": "bid",
+          "bookWallPrice": 2.73,
+          "volumeSpikeRatio": null
         }
       ]
     }
   },
-  "updatedAt": "2026-05-04T15:07:22.845694+02:00"
+  "updatedAt": "2026-05-04T17:20:59.056500+02:00"
 }
