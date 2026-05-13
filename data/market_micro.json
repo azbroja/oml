@@ -3,7 +3,7 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-05-13T18:42:03.977210+02:00",
+      "scrapedAt": "2026-05-13T20:30:15.266648+02:00",
       "marketDate": "2026-05-13",
       "updatedAt": "2026-05-13T17:58:02+02:00",
       "delayMinutes": 15,
@@ -1292,9 +1292,21 @@
           "bookWallSide": "bid",
           "bookWallPrice": 2.6,
           "volumeSpikeRatio": null
+        },
+        {
+          "scrapedAt": "2026-05-13T20:30:15.266648+02:00",
+          "updatedAt": "2026-05-13T17:58:02+02:00",
+          "orderBookImbalance": 0.2774,
+          "pressureDominance5m": 0.0,
+          "cumulativeDelta5m": 0,
+          "totalVolume5m": 20,
+          "tradeCount5m": 1,
+          "bookWallSide": "bid",
+          "bookWallPrice": 2.6,
+          "volumeSpikeRatio": null
         }
       ]
     }
   },
-  "updatedAt": "2026-05-13T18:42:03.977210+02:00"
+  "updatedAt": "2026-05-13T20:30:15.266648+02:00"
 }
