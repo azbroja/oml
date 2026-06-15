@@ -13,6 +13,9 @@ on:
 permissions:
   contents: write   # workflow commituje data/last_run.json (dedupe)
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: oml-price-check
   cancel-in-progress: false
@@ -57,5 +60,6 @@ jobs:
             git config user.email "oml-bot@users.noreply.github.com"
             git add data/last_run.json data/market_micro.json
             git commit -m "chore: update market data"
+            git pull --rebase origin main
             git push
           fi

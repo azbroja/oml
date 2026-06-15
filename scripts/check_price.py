@@ -59,6 +59,11 @@ MICRO_SOURCES = {
         "trades_url": "https://gragieldowa.pl/spolka_transakcje/spolka/oml",
     }
 }
+COINGECKO_IDS = {
+    "btc": "bitcoin",
+    "btcusd": "bitcoin",
+    "bitcoin": "bitcoin",
+}
 
 
 @dataclass
@@ -214,11 +219,111 @@ def fetch_quote_stooq(ticker: str) -> Quote | None:
     )
 
 
+def parse_volume_int(text: str) -> int:
+    cleaned = normalize_ws(text).replace(" ", "")
+    if not cleaned:
+        return 0
+    # GraGieldowa uses dots in stock volumes, while prices also use dots.
+    # Volumes are whole shares, so remove separators instead of treating them as decimals.
+    cleaned = cleaned.replace(".", "").replace(",", "")
+    try:
+        return int(cleaned)
+    except ValueError:
+        return 0
+
+
+def fetch_quote_gragieldowa(ticker: str, now: datetime | None = None) -> Quote | None:
+    ticker_id = ticker.lower()
+    url = f"https://gragieldowa.pl/spolka_transakcje/spolka/{ticker_id}"
+    soup = fetch_html(url)
+    now = now or datetime.now(tz=WARSAW)
+
+    table = None
+    for candidate in soup.find_all("table", class_="data maintable"):
+        headers = [normalize_ws(th.get_text(" ", strip=True)) for th in candidate.find_all("th")]
+        if {"Lp", "Czas", "Kurs", "Wolumen"}.issubset(set(headers)):
+            table = candidate
+            break
+    if table is None:
+        log(f"GraGieldowa nie zwróciła tabeli transakcji dla {ticker}")
+        return None
+
+    rows = []
+    for row in table.find_all("tr"):
+        cells = row.find_all("td")
+        if len(cells) != 4:
+            continue
+        try:
+            lp = int(normalize_ws(cells[0].get_text(" ", strip=True)))
+            time = normalize_ws(cells[1].get_text(" ", strip=True))
+            price = parse_pl_float(cells[2].get_text(" ", strip=True))
+            volume = parse_volume_int(cells[3].get_text(" ", strip=True))
+        except (TypeError, ValueError):
+            continue
+        if not re.match(r"^\d{2}:\d{2}:\d{2}$", time):
+            continue
+        rows.append({"lp": lp, "time": time, "price": price, "volume": volume})
+
+    if not rows:
+        log(f"GraGieldowa nie zwróciła transakcji dla {ticker}")
+        return None
+
+    rows.sort(key=lambda item: item["lp"])
+    open_row = rows[0]
+    close_row = rows[-1]
+    prices = [row["price"] for row in rows]
+    return Quote(
+        symbol=ticker.upper(),
+        date=now.date().isoformat(),
+        time=close_row["time"],
+        close=close_row["price"],
+        open_=open_row["price"],
+        high=max(prices),
+        low=min(prices),
+        volume=sum(row["volume"] for row in rows),
+    )
+
+
+def fetch_quote_coingecko(ticker: str) -> Quote | None:
+    coin_id = COINGECKO_IDS.get(ticker.lower())
+    if not coin_id:
+        log(f"Brak mapowania CoinGecko dla {ticker}")
+        return None
+    url = (
+        "https://api.coingecko.com/api/v3/simple/price"
+        f"?ids={coin_id}&vs_currencies=usd&include_24hr_vol=true"
+    )
+    log(f"GET {url}")
+    r = requests.get(url, timeout=15, headers={"User-Agent": "multi-alert/1.0"})
+    r.raise_for_status()
+    data = r.json().get(coin_id, {})
+    price = data.get("usd")
+    if price is None:
+        log(f"CoinGecko nie zwrócił ceny dla {ticker}: {data}")
+        return None
+    now = datetime.now(tz=WARSAW)
+    close = float(price)
+    return Quote(
+        symbol=ticker.upper(),
+        date=now.date().isoformat(),
+        time=now.strftime("%H:%M:%S"),
+        close=close,
+        open_=close,
+        high=close,
+        low=close,
+        volume=int(float(data.get("usd_24h_vol") or 0)),
+    )
+
+
 def fetch_quote(t: dict) -> Quote | None:
     src = (t.get("source") or "stooq").lower()
     sym = t.get("ticker", t.get("id", "")).strip()
     if src == "stooq":
         return fetch_quote_stooq(sym)
+    if src == "gragieldowa":
+        return fetch_quote_gragieldowa(sym)
+    if src == "coingecko":
+        return fetch_quote_coingecko(sym)
     log(f"Nieznane źródło: {src!r}")
     return None
 
@@ -775,6 +880,9 @@ def process_ticker(t: dict, now: datetime, backfill: bool, test_push: bool,
 
     if not subscription:
         log(f"[{tid}] brak subskrypcji — push pominięty (alert byłby: {title})")
+        return
+    if not os.environ.get("VAPID_PRIVATE_KEY", "").strip():
+        log(f"[{tid}] brak VAPID_PRIVATE_KEY — push pominięty (alert byłby: {title})")
         return
 
     payload = {
