@@ -223,13 +223,28 @@ def parse_volume_int(text: str) -> int:
     cleaned = normalize_ws(text).replace(" ", "")
     if not cleaned:
         return 0
-    # GraGieldowa uses dots in stock volumes, while prices also use dots.
-    # Volumes are whole shares, so remove separators instead of treating them as decimals.
-    cleaned = cleaned.replace(".", "").replace(",", "")
+    cleaned = cleaned.replace(",", ".")
+    if "." in cleaned:
+        whole, frac = cleaned.split(".", 1)
+        # GraGieldowa abbreviates thousands as 1.5, 1.05, 1.005.
+        cleaned = whole + frac.ljust(3, "0")[:3]
     try:
         return int(cleaned)
     except ValueError:
         return 0
+
+
+def apply_cumulative_volumes(rows: list[dict]) -> list[dict]:
+    previous = 0
+    normalized = []
+    for row in rows:
+        current = int(row.get("volume", 0) or 0)
+        volume = current - previous if current >= previous else current
+        item = dict(row)
+        item["volume"] = max(volume, 0)
+        normalized.append(item)
+        previous = current
+    return normalized
 
 
 def fetch_quote_gragieldowa(ticker: str, now: datetime | None = None) -> Quote | None:
@@ -269,6 +284,7 @@ def fetch_quote_gragieldowa(ticker: str, now: datetime | None = None) -> Quote |
         return None
 
     rows.sort(key=lambda item: item["lp"])
+    rows = apply_cumulative_volumes(rows)
     open_row = rows[0]
     close_row = rows[-1]
     prices = [row["price"] for row in rows]
@@ -423,26 +439,40 @@ def parse_trades_table(soup: BeautifulSoup, trade_date) -> list[MicroTrade]:
     if table is None:
         return []
 
-    trades: list[MicroTrade] = []
+    rows = []
     for row in table.find_all("tr"):
         cells = row.find_all("td")
         if len(cells) != 4:
             continue
+        lp_raw = normalize_ws(cells[0].get_text(" ", strip=True))
         time = normalize_ws(cells[1].get_text(" ", strip=True))
         price_raw = normalize_ws(cells[2].get_text(" ", strip=True))
         volume_raw = normalize_ws(cells[3].get_text(" ", strip=True))
         if not re.match(r"^\d{2}:\d{2}:\d{2}$", time):
             continue
         try:
+            lp = int(lp_raw)
             dt = datetime.strptime(f"{trade_date.isoformat()} {time}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=WARSAW)
-            trades.append(MicroTrade(
-                time=time,
-                price=float(price_raw),
-                volume=int(volume_raw),
-                timestamp=dt.isoformat(),
-            ))
+            rows.append({
+                "lp": lp,
+                "time": time,
+                "price": float(price_raw),
+                "volume": parse_volume_int(volume_raw),
+                "timestamp": dt.isoformat(),
+            })
         except ValueError:
             continue
+    rows.sort(key=lambda item: item["lp"])
+    rows = apply_cumulative_volumes(rows)
+    trades = [
+        MicroTrade(
+            time=row["time"],
+            price=row["price"],
+            volume=row["volume"],
+            timestamp=row["timestamp"],
+        )
+        for row in rows
+    ]
     trades.sort(key=lambda t: t.timestamp)
     return trades
 
@@ -645,19 +675,26 @@ def build_micro_entry(ticker_id: str, now: datetime, previous: dict | None = Non
     book_soup = fetch_html(src["book_url"])
     trades_soup = fetch_html(src["trades_url"])
 
-    updated_at = parse_book_updated_at_from_soup(book_soup, now)
+    book_updated_at = parse_book_updated_at_from_soup(book_soup, now)
     bids = parse_book_table(book_soup, "arkusz_left")
     asks = parse_book_table(book_soup, "arkusz_right")
+    book_is_stale = False
+    if (not bids or not asks) and isinstance(previous, dict):
+        previous_book = previous.get("book") or {}
+        bids = [MicroLevel(**level) for level in previous_book.get("bids", []) if isinstance(level, dict)]
+        asks = [MicroLevel(**level) for level in previous_book.get("asks", []) if isinstance(level, dict)]
+        book_is_stale = bool(bids and asks)
     if not bids or not asks:
-        raise RuntimeError(f"Nie udało się sparsować arkusza zleceń dla {ticker_id}")
+        log(f"[{ticker_id}] arkusz zleceń pusty — zapisuję analizę transakcji bez arkusza")
 
     trade_lines = text_lines(trades_soup.get_text("\n"))
-    trade_date = parse_trade_date(trade_lines, updated_at)
+    trade_date = parse_trade_date(trade_lines, now)
     trades = parse_trades_table(trades_soup, trade_date)
     if not trades:
         raise RuntimeError(f"Nie udało się sparsować transakcji dla {ticker_id}")
 
     latest_trade_dt = datetime.fromisoformat(trades[-1].timestamp)
+    updated_at = latest_trade_dt
     pressure_1h = summarize_pressure(trades, latest_trade_dt, timedelta(hours=1))
     pressure_5m = summarize_pressure(trades, latest_trade_dt, timedelta(minutes=5))
 
@@ -667,9 +704,10 @@ def build_micro_entry(ticker_id: str, now: datetime, previous: dict | None = Non
     if bid_volume_top + ask_volume_top > 0:
         imbalance = (bid_volume_top - ask_volume_top) / (bid_volume_top + ask_volume_top)
 
-    best_bid = bids[0].price
-    best_ask = asks[0].price
+    best_bid = bids[0].price if bids else None
+    best_ask = asks[0].price if asks else None
     book_wall = build_book_wall_signal("bid", bids) or build_book_wall_signal("ask", asks)
+    spread = round(best_ask - best_bid, 4) if best_bid is not None and best_ask is not None else None
 
     provisional_entry = {
         "symbol": src["symbol"],
@@ -683,7 +721,9 @@ def build_micro_entry(ticker_id: str, now: datetime, previous: dict | None = Non
             "asks": [level_to_dict(level) for level in asks],
             "topBid": best_bid,
             "topAsk": best_ask,
-            "spread": round(best_ask - best_bid, 4),
+            "spread": spread,
+            "stale": book_is_stale,
+            "updatedAt": book_updated_at.isoformat() if book_is_stale else updated_at.isoformat(),
         },
         "trades": {
             "latest": [trade_to_dict(t) for t in trades[-MICRO_TRADES_LIMIT:]][::-1],
