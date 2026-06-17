@@ -3,7 +3,7 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-06-17T17:31:55.682301+02:00",
+      "scrapedAt": "2026-06-17T20:04:02.652482+02:00",
       "marketDate": "2026-06-17",
       "updatedAt": "2026-06-17T17:01:08+02:00",
       "delayMinutes": 15,
@@ -237,32 +237,32 @@
         "orderBookImbalance": -0.6571,
         "bidVolumeTop": 8277,
         "askVolumeTop": 40000,
-        "tradeCount1h": 237,
-        "avgTradeSize1h": 12107.19,
+        "tradeCount1h": 705,
+        "avgTradeSize1h": 13177.31,
         "uptickVolume1h": 6938,
-        "downtickVolume1h": 2859469,
+        "downtickVolume1h": 9280069,
         "flatVolume1h": 2996,
-        "pressureDominance1h": -0.9952,
-        "totalVolume1h": 2869403,
-        "tradeCount5m": 212,
-        "avgTradeSize5m": 12673.04,
+        "pressureDominance1h": -0.9985,
+        "totalVolume1h": 9290003,
+        "tradeCount5m": 680,
+        "avgTradeSize5m": 13393.07,
         "uptickVolume5m": 0,
         "downtickVolume5m": 0,
         "pressureDominance5m": 0.0,
-        "totalVolume5m": 2686685,
+        "totalVolume5m": 9107285,
         "cumulativeDelta5m": 0
       },
       "pressure1h": {
         "windowStart": "2026-06-17T16:01:08+02:00",
         "windowEnd": "2026-06-17T17:01:08+02:00",
-        "tradeCount": 237,
-        "totalVolume": 2869403,
-        "avgTradeSize": 12107.19,
+        "tradeCount": 705,
+        "totalVolume": 9290003,
+        "avgTradeSize": 13177.31,
         "uptickVolume": 6938,
-        "downtickVolume": 2859469,
+        "downtickVolume": 9280069,
         "flatVolume": 2996,
-        "dominance": -0.9952,
-        "cumulativeDelta": -2852531,
+        "dominance": -0.9985,
+        "cumulativeDelta": -9273131,
         "latestTrades": [
           {
             "time": "17:01:08",
@@ -419,12 +419,12 @@
       "pressure5m": {
         "windowStart": "2026-06-17T16:56:08+02:00",
         "windowEnd": "2026-06-17T17:01:08+02:00",
-        "tradeCount": 212,
-        "totalVolume": 2686685,
-        "avgTradeSize": 12673.04,
+        "tradeCount": 680,
+        "totalVolume": 9107285,
+        "avgTradeSize": 13393.07,
         "uptickVolume": 0,
         "downtickVolume": 0,
-        "flatVolume": 2686685,
+        "flatVolume": 9107285,
         "dominance": 0.0,
         "cumulativeDelta": 0,
         "latestTrades": [
@@ -590,32 +590,20 @@
           "message": "BID wall detected at 2.28"
         },
         "volumeSpike": {
-          "currentVolume": 2686685,
+          "currentVolume": 9107285,
           "baselineVolume": 500,
-          "ratio": 5373.37,
+          "ratio": 18214.57,
           "message": "abnormal volume detected"
         },
         "rollingImbalance5m": {
-          "points": 2,
-          "sum": -1.3142,
+          "points": 1,
+          "sum": -0.6571,
           "avg": -0.6571,
           "cumulativeDelta": 0,
           "message": "sell pressure trend"
         }
       },
       "snapshots": [
-        {
-          "scrapedAt": "2026-05-08T13:43:33.964473+02:00",
-          "updatedAt": "2026-05-08T13:42:02+02:00",
-          "orderBookImbalance": 0.2034,
-          "pressureDominance5m": 1.0,
-          "cumulativeDelta5m": 2750,
-          "totalVolume5m": 3000,
-          "tradeCount5m": 5,
-          "bookWallSide": "bid",
-          "bookWallPrice": 2.63,
-          "volumeSpikeRatio": null
-        },
         {
           "scrapedAt": "2026-05-08T15:00:50.583646+02:00",
           "updatedAt": "2026-05-08T15:00:02+02:00",
@@ -1467,9 +1455,21 @@
           "bookWallSide": "bid",
           "bookWallPrice": 2.28,
           "volumeSpikeRatio": null
+        },
+        {
+          "scrapedAt": "2026-06-17T20:04:02.652482+02:00",
+          "updatedAt": "2026-06-17T17:01:08+02:00",
+          "orderBookImbalance": -0.6571,
+          "pressureDominance5m": 0.0,
+          "cumulativeDelta5m": 0,
+          "totalVolume5m": 9107285,
+          "tradeCount5m": 680,
+          "bookWallSide": "bid",
+          "bookWallPrice": 2.28,
+          "volumeSpikeRatio": null
         }
       ]
     }
   },
-  "updatedAt": "2026-06-17T17:31:55.682301+02:00"
+  "updatedAt": "2026-06-17T20:04:02.652482+02:00"
 }
