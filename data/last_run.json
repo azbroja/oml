@@ -36,23 +36,23 @@
           "checkedAt": "2026-06-25T12:17:25.888021+02:00"
         },
         "14:30": {
-          "date": "2026-06-24",
-          "time": "14:13:30",
-          "close": 2.1,
-          "open": 2.05,
-          "high": 2.19,
-          "low": 2.04,
-          "checkedAt": "2026-06-24T14:33:54.242216+02:00"
+          "date": "2026-06-25",
+          "time": "14:10:43",
+          "close": 2.26,
+          "open": 2.15,
+          "high": 2.3,
+          "low": 2.13,
+          "checkedAt": "2026-06-25T14:34:52.397169+02:00"
         }
       },
-      "lastKey": "2026-06-25@09:30",
-      "lastCheck": "2026-06-25T12:17:25.888021+02:00",
-      "lastClose": 2.2,
+      "lastKey": "2026-06-25@14:30",
+      "lastCheck": "2026-06-25T14:34:52.397169+02:00",
+      "lastClose": 2.26,
       "lastAlert": {
-        "title": "OML ↓ 2.20 PLN",
-        "body": "One More Level: spadek poniżej 2.85 PLN. Open 2.15 PLN, dzień: 2.13 PLN–2.28 PLN.",
+        "title": "OML ↓ 2.26 PLN",
+        "body": "One More Level: spadek poniżej 2.85 PLN. Open 2.15 PLN, dzień: 2.13 PLN–2.30 PLN.",
         "kind": "below",
-        "at": "2026-06-25T12:17:25.888021+02:00"
+        "at": "2026-06-25T14:34:52.397169+02:00"
       },
       "historyPoints": [
         {
@@ -197,6 +197,18 @@
           "close": 2.2,
           "open": 2.15,
           "high": 2.28,
+          "low": 2.13
+        },
+        {
+          "key": "2026-06-25@14:30",
+          "day": "2026-06-25",
+          "slot": "14:30",
+          "checkedAt": "2026-06-25T14:34:52.397169+02:00",
+          "marketDate": "2026-06-25",
+          "marketTime": "14:10:43",
+          "close": 2.26,
+          "open": 2.15,
+          "high": 2.3,
           "low": 2.13
         }
       ]
