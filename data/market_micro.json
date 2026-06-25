@@ -1384,8 +1384,12 @@
           "bookWallPrice": 2.3,
           "volumeSpikeRatio": null
         }
-      ]
+      ],
+      "lastError": {
+        "message": "HTTPSConnectionPool(host='gragieldowa.pl', port=443): Max retries exceeded with url: /spolka_arkusz_zl/spolka/oml (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1010)')))",
+        "at": "2026-06-25T22:30:31.518812+02:00"
+      }
     }
   },
-  "updatedAt": "2026-06-25T19:33:08.714675+02:00"
+  "updatedAt": "2026-06-25T22:30:31.518812+02:00"
 }
