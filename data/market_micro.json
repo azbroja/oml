@@ -3,7 +3,7 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-07-13T17:48:39.215411+02:00",
+      "scrapedAt": "2026-07-13T19:46:33.192013+02:00",
       "marketDate": "2026-07-13",
       "updatedAt": "2026-07-13T17:00:09+02:00",
       "delayMinutes": 15,
@@ -43,8 +43,8 @@
         "asks": [
           {
             "price": 2.22,
-            "volume": 591,
-            "value": 1312.02,
+            "volume": 566,
+            "value": 1256.52,
             "orders": 3
           },
           {
@@ -234,9 +234,9 @@
         "latestTimestamp": "2026-07-13T17:00:09+02:00"
       },
       "metrics": {
-        "orderBookImbalance": 0.1158,
+        "orderBookImbalance": 0.1169,
         "bidVolumeTop": 14839,
-        "askVolumeTop": 11758,
+        "askVolumeTop": 11733,
         "tradeCount1h": 4,
         "avgTradeSize1h": 8.0,
         "uptickVolume1h": 0,
@@ -322,25 +322,13 @@
         "volumeSpike": null,
         "rollingImbalance5m": {
           "points": 1,
-          "sum": 0.1158,
-          "avg": 0.1158,
+          "sum": 0.1169,
+          "avg": 0.1169,
           "cumulativeDelta": 0,
           "message": "buy pressure trend"
         }
       },
       "snapshots": [
-        {
-          "scrapedAt": "2026-06-17T17:27:32.974046+02:00",
-          "updatedAt": "2026-06-17T17:01:08+02:00",
-          "orderBookImbalance": -0.6571,
-          "pressureDominance5m": 0.0,
-          "cumulativeDelta5m": 0,
-          "totalVolume5m": 1259885,
-          "tradeCount5m": 108,
-          "bookWallSide": "bid",
-          "bookWallPrice": 2.28,
-          "volumeSpikeRatio": null
-        },
         {
           "scrapedAt": "2026-06-17T17:31:55.682301+02:00",
           "updatedAt": "2026-06-17T17:01:08+02:00",
@@ -1192,9 +1180,21 @@
           "bookWallSide": "bid",
           "bookWallPrice": 2.15,
           "volumeSpikeRatio": null
+        },
+        {
+          "scrapedAt": "2026-07-13T19:46:33.192013+02:00",
+          "updatedAt": "2026-07-13T17:00:09+02:00",
+          "orderBookImbalance": 0.1169,
+          "pressureDominance5m": 0.0,
+          "cumulativeDelta5m": 0,
+          "totalVolume5m": 25,
+          "tradeCount5m": 1,
+          "bookWallSide": "bid",
+          "bookWallPrice": 2.15,
+          "volumeSpikeRatio": null
         }
       ]
     }
   },
-  "updatedAt": "2026-07-13T17:48:39.215411+02:00"
+  "updatedAt": "2026-07-13T19:46:33.192013+02:00"
 }
