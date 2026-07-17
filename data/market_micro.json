@@ -3,7 +3,7 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-07-17T17:39:12.050085+02:00",
+      "scrapedAt": "2026-07-17T18:47:37.759864+02:00",
       "marketDate": "2026-07-17",
       "updatedAt": "2026-07-17T17:01:54+02:00",
       "delayMinutes": 15,
@@ -237,15 +237,15 @@
         "orderBookImbalance": 0.3488,
         "bidVolumeTop": 18153,
         "askVolumeTop": 8765,
-        "tradeCount1h": 59,
-        "avgTradeSize1h": 201.98,
+        "tradeCount1h": 79,
+        "avgTradeSize1h": 150.85,
         "uptickVolume1h": 8209,
         "downtickVolume1h": 3008,
         "flatVolume1h": 700,
         "pressureDominance1h": 0.4637,
         "totalVolume1h": 11917,
-        "tradeCount5m": 36,
-        "avgTradeSize5m": 3.08,
+        "tradeCount5m": 56,
+        "avgTradeSize5m": 1.98,
         "uptickVolume5m": 0,
         "downtickVolume5m": 0,
         "pressureDominance5m": 0.0,
@@ -255,9 +255,9 @@
       "pressure1h": {
         "windowStart": "2026-07-17T16:01:54+02:00",
         "windowEnd": "2026-07-17T17:01:54+02:00",
-        "tradeCount": 59,
+        "tradeCount": 79,
         "totalVolume": 11917,
-        "avgTradeSize": 201.98,
+        "avgTradeSize": 150.85,
         "uptickVolume": 8209,
         "downtickVolume": 3008,
         "flatVolume": 700,
@@ -419,9 +419,9 @@
       "pressure5m": {
         "windowStart": "2026-07-17T16:56:54+02:00",
         "windowEnd": "2026-07-17T17:01:54+02:00",
-        "tradeCount": 36,
+        "tradeCount": 56,
         "totalVolume": 111,
-        "avgTradeSize": 3.08,
+        "avgTradeSize": 1.98,
         "uptickVolume": 0,
         "downtickVolume": 0,
         "flatVolume": 111,
@@ -592,18 +592,6 @@
         }
       },
       "snapshots": [
-        {
-          "scrapedAt": "2026-06-26T12:25:01.252257+02:00",
-          "updatedAt": "2026-06-26T12:08:42+02:00",
-          "orderBookImbalance": -0.0125,
-          "pressureDominance5m": 1.0,
-          "cumulativeDelta5m": 221,
-          "totalVolume5m": 521,
-          "tradeCount5m": 6,
-          "bookWallSide": "bid",
-          "bookWallPrice": 2.3,
-          "volumeSpikeRatio": null
-        },
         {
           "scrapedAt": "2026-06-26T14:31:40.023219+02:00",
           "updatedAt": "2026-06-26T14:11:51+02:00",
@@ -1455,9 +1443,21 @@
           "bookWallSide": null,
           "bookWallPrice": null,
           "volumeSpikeRatio": null
+        },
+        {
+          "scrapedAt": "2026-07-17T18:47:37.759864+02:00",
+          "updatedAt": "2026-07-17T17:01:54+02:00",
+          "orderBookImbalance": 0.3488,
+          "pressureDominance5m": 0.0,
+          "cumulativeDelta5m": 0,
+          "totalVolume5m": 111,
+          "tradeCount5m": 56,
+          "bookWallSide": null,
+          "bookWallPrice": null,
+          "volumeSpikeRatio": null
         }
       ]
     }
   },
-  "updatedAt": "2026-07-17T17:39:12.050085+02:00"
+  "updatedAt": "2026-07-17T18:47:37.759864+02:00"
 }
