@@ -3,7 +3,7 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-08-07T17:37:57.280495+02:00",
+      "scrapedAt": "2026-08-07T18:33:31.965788+02:00",
       "marketDate": "2026-08-07",
       "updatedAt": "2026-08-07T17:00:09+02:00",
       "delayMinutes": 15,
@@ -11,9 +11,9 @@
         "bids": [
           {
             "price": 2.23,
-            "volume": 1314,
-            "value": 2930.22,
-            "orders": 3
+            "volume": 1600,
+            "value": 3568.0,
+            "orders": 2
           },
           {
             "price": 2.22,
@@ -29,9 +29,9 @@
           },
           {
             "price": 2.2,
-            "volume": 13454,
-            "value": 29598.8,
-            "orders": 5
+            "volume": 10275,
+            "value": 22605.0,
+            "orders": 4
           },
           {
             "price": 2.19,
@@ -42,16 +42,10 @@
         ],
         "asks": [
           {
-            "price": 2.26,
-            "volume": 420,
-            "value": 949.2,
-            "orders": 1
-          },
-          {
             "price": 2.27,
-            "volume": 800,
-            "value": 1816.0,
-            "orders": 1
+            "volume": 1036,
+            "value": 2351.72,
+            "orders": 3
           },
           {
             "price": 2.28,
@@ -67,14 +61,20 @@
           },
           {
             "price": 2.3,
-            "volume": 9221,
-            "value": 21208.3,
-            "orders": 6
+            "volume": 5241,
+            "value": 12054.3,
+            "orders": 3
+          },
+          {
+            "price": 2.31,
+            "volume": 500,
+            "value": 1155.0,
+            "orders": 1
           }
         ],
         "topBid": 2.23,
-        "topAsk": 2.26,
-        "spread": 0.03,
+        "topAsk": 2.27,
+        "spread": 0.04,
         "stale": false,
         "updatedAt": "2026-08-07T17:00:09+02:00"
       },
@@ -234,9 +234,9 @@
         "latestTimestamp": "2026-08-07T17:00:09+02:00"
       },
       "metrics": {
-        "orderBookImbalance": 0.0026,
-        "bidVolumeTop": 21030,
-        "askVolumeTop": 20922,
+        "orderBookImbalance": 0.0248,
+        "bidVolumeTop": 18137,
+        "askVolumeTop": 17258,
         "tradeCount1h": 60,
         "avgTradeSize1h": 6226.53,
         "uptickVolume1h": 217618,
@@ -452,33 +452,21 @@
         "bookWall": {
           "side": "bid",
           "price": 2.2,
-          "volume": 13454,
-          "orders": 5,
-          "strengthVsMedian": 7.64,
+          "volume": 10275,
+          "orders": 4,
+          "strengthVsMedian": 5.83,
           "message": "BID wall detected at 2.20"
         },
         "volumeSpike": null,
         "rollingImbalance5m": {
           "points": 1,
-          "sum": 0.0026,
-          "avg": 0.0026,
+          "sum": 0.0248,
+          "avg": 0.0248,
           "cumulativeDelta": 0,
           "message": "buy pressure trend"
         }
       },
       "snapshots": [
-        {
-          "scrapedAt": "2026-07-21T13:25:48.652717+02:00",
-          "updatedAt": "2026-07-21T12:54:54+02:00",
-          "orderBookImbalance": 0.1946,
-          "pressureDominance5m": -0.4949,
-          "cumulativeDelta5m": -49,
-          "totalVolume5m": 141,
-          "tradeCount5m": 7,
-          "bookWallSide": "ask",
-          "bookWallPrice": 2.14,
-          "volumeSpikeRatio": null
-        },
         {
           "scrapedAt": "2026-07-21T14:56:40.330703+02:00",
           "updatedAt": "2026-07-21T14:35:11+02:00",
@@ -1330,9 +1318,21 @@
           "bookWallSide": "bid",
           "bookWallPrice": 2.2,
           "volumeSpikeRatio": null
+        },
+        {
+          "scrapedAt": "2026-08-07T18:33:31.965788+02:00",
+          "updatedAt": "2026-08-07T17:00:09+02:00",
+          "orderBookImbalance": 0.0248,
+          "pressureDominance5m": 0.0,
+          "cumulativeDelta5m": 0,
+          "totalVolume5m": 616,
+          "tradeCount5m": 3,
+          "bookWallSide": "bid",
+          "bookWallPrice": 2.2,
+          "volumeSpikeRatio": null
         }
       ]
     }
   },
-  "updatedAt": "2026-08-07T17:37:57.280495+02:00"
+  "updatedAt": "2026-08-07T18:33:31.965788+02:00"
 }
