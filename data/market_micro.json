@@ -3,7 +3,7 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-08-18T17:43:55.691516+02:00",
+      "scrapedAt": "2026-08-18T18:12:14.322221+02:00",
       "marketDate": "2026-08-18",
       "updatedAt": "2026-08-18T17:00:14+02:00",
       "delayMinutes": 15,
@@ -389,18 +389,6 @@
         }
       },
       "snapshots": [
-        {
-          "scrapedAt": "2026-08-10T19:34:43.028015+02:00",
-          "updatedAt": "2026-08-10T17:00:15+02:00",
-          "orderBookImbalance": 0.1748,
-          "pressureDominance5m": 0.0,
-          "cumulativeDelta5m": 0,
-          "totalVolume5m": 2,
-          "tradeCount5m": 2,
-          "bookWallSide": "bid",
-          "bookWallPrice": 2.22,
-          "volumeSpikeRatio": null
-        },
         {
           "scrapedAt": "2026-08-11T10:11:07.551010+02:00",
           "updatedAt": "2026-08-11T09:40:32+02:00",
@@ -1252,9 +1240,21 @@
           "bookWallSide": "bid",
           "bookWallPrice": 2.17,
           "volumeSpikeRatio": null
+        },
+        {
+          "scrapedAt": "2026-08-18T18:12:14.322221+02:00",
+          "updatedAt": "2026-08-18T17:00:14+02:00",
+          "orderBookImbalance": 0.2556,
+          "pressureDominance5m": 0.0,
+          "cumulativeDelta5m": 0,
+          "totalVolume5m": 948,
+          "tradeCount5m": 2,
+          "bookWallSide": "bid",
+          "bookWallPrice": 2.17,
+          "volumeSpikeRatio": null
         }
       ]
     }
   },
-  "updatedAt": "2026-08-18T17:43:55.691516+02:00"
+  "updatedAt": "2026-08-18T18:12:14.322221+02:00"
 }
