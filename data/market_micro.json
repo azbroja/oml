@@ -3,7 +3,7 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-08-24T18:36:06.385908+02:00",
+      "scrapedAt": "2026-08-24T19:14:21.293923+02:00",
       "marketDate": "2026-08-24",
       "updatedAt": "2026-08-24T16:44:34+02:00",
       "delayMinutes": 15,
@@ -495,8 +495,8 @@
         },
         "volumeSpike": {
           "currentVolume": 11270,
-          "baselineVolume": 1601,
-          "ratio": 7.04,
+          "baselineVolume": 1955,
+          "ratio": 5.76,
           "message": "abnormal volume detected"
         },
         "rollingImbalance5m": {
@@ -508,18 +508,6 @@
         }
       },
       "snapshots": [
-        {
-          "scrapedAt": "2026-08-18T13:42:14.260060+02:00",
-          "updatedAt": "2026-08-18T13:20:40+02:00",
-          "orderBookImbalance": 0.5107,
-          "pressureDominance5m": 0.0,
-          "cumulativeDelta5m": 0,
-          "totalVolume5m": 50,
-          "tradeCount5m": 2,
-          "bookWallSide": "bid",
-          "bookWallPrice": 2.13,
-          "volumeSpikeRatio": null
-        },
         {
           "scrapedAt": "2026-08-18T14:03:11.452783+02:00",
           "updatedAt": "2026-08-18T13:44:31+02:00",
@@ -1371,9 +1359,21 @@
           "bookWallSide": "ask",
           "bookWallPrice": 2.33,
           "volumeSpikeRatio": null
+        },
+        {
+          "scrapedAt": "2026-08-24T19:14:21.293923+02:00",
+          "updatedAt": "2026-08-24T16:44:34+02:00",
+          "orderBookImbalance": 0.1749,
+          "pressureDominance5m": 1.0,
+          "cumulativeDelta5m": 6589,
+          "totalVolume5m": 11270,
+          "tradeCount5m": 9,
+          "bookWallSide": "ask",
+          "bookWallPrice": 2.33,
+          "volumeSpikeRatio": null
         }
       ]
     }
   },
-  "updatedAt": "2026-08-24T18:36:06.385908+02:00"
+  "updatedAt": "2026-08-24T19:14:21.293923+02:00"
 }
