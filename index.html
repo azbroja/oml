@@ -837,6 +837,8 @@ function renderMicro() {
   const bids = micro.book.bids || [];
   const asks = micro.book.asks || [];
   const latestTrades = micro.trades.latest || [];
+  const isTradesVerified = Boolean(micro.trades && micro.trades.verified);
+  const tradesSource = (micro.trades && micro.trades.source) || 'biznesradar.pl';
   const metrics = micro.metrics || {};
   const pressure = micro.pressure1h || {};
   const pressure5m = micro.pressure5m || {};
@@ -847,15 +849,27 @@ function renderMicro() {
   const bestBid = bids[0];
   const bestAsk = asks[0];
   const imbalanceClass = (metrics.orderBookImbalance || 0) >= 0 ? 'buy' : 'sell';
-  const pressureClass = (metrics.pressureDominance1h || 0) >= 0 ? 'buy' : 'sell';
+  const pressureClass = (metrics.pressureDominance1h != null && metrics.pressureDominance1h >= 0) ? 'buy' : 'sell';
   const rollingClass = (rollingImbalance && (rollingImbalance.sum || 0) >= 0) ? 'buy' : 'sell';
   const avgTradeSize = metrics.avgTradeSize1h == null || isNaN(metrics.avgTradeSize1h)
     ? '—'
     : fmtInt(metrics.avgTradeSize1h);
 
-  meta.textContent = `Źródło: graGieldowa.pl · stan rynku: ${fmtPriceTime(micro.updatedAt)} · ${status.badge}`;
+  const tradesBadge = isTradesVerified ? '🟢 Transakcje zweryfikowane' : '⚠️ Transakcje niezweryfikowane';
+  meta.textContent = `Arkusz: graGieldowa.pl · Transakcje: ${tradesSource} (${tradesBadge}) · stan rynku: ${fmtPriceTime(micro.updatedAt)} · ${status.badge}`;
+
+  let verificationNotice = '';
+  if (!isTradesVerified) {
+    verificationNotice = `
+      <div class="micro-status-banner warn" style="margin-top:6px">
+        <strong>⚠️ Wstrzymano kalkulację presji i delty</strong>
+        <div class="micro-sub" style="color:#fef08a">Surowe transakcje jednostkowe nie zostały potwierdzone. Wartości cumulative delta oraz volume spike pozostają wyłączone do czasu weryfikacji.</div>
+      </div>`;
+  }
+
   content.innerHTML = `
     ${statusBanner}
+    ${verificationNotice}
     <div class="micro-panel">
       <div class="micro-head">
         <div class="micro-title">Sygnały</div>
@@ -864,15 +878,15 @@ function renderMicro() {
       <div class="micro-book">
         <div class="micro-signal ${rollingClass}">
           <strong>${rollingImbalance && rollingImbalance.message ? rollingImbalance.message : 'Brak trendu 5m'}</strong>
-          <span class="micro-sub">imbalance sum ${rollingImbalance ? fmtSignedPct(rollingImbalance.sum) : '—'} · cumulative delta ${rollingImbalance ? fmtInt(rollingImbalance.cumulativeDelta) : '—'}</span>
+          <span class="micro-sub">imbalance sum ${rollingImbalance ? fmtSignedPct(rollingImbalance.sum) : '—'} · cumulative delta ${rollingImbalance && rollingImbalance.cumulativeDelta != null ? fmtInt(rollingImbalance.cumulativeDelta) : '— (niezweryfikowane)'}</span>
         </div>
         <div class="micro-signal ${bookWall ? (bookWall.side === 'bid' ? 'buy' : 'sell') : ''}">
           <strong>${bookWall && bookWall.message ? bookWall.message : 'No bid/ask wall detected'}</strong>
           <span class="micro-sub">${bookWall ? `wolumen ${fmtInt(bookWall.volume)} · ${fmtInt(bookWall.orders)} zleceń · x${bookWall.strengthVsMedian} mediany` : 'Brak ponadprzeciętnej ściany w top poziomach.'}</span>
         </div>
         <div class="micro-signal ${volumeSpike ? 'warn' : ''}">
-          <strong>${volumeSpike && volumeSpike.message ? volumeSpike.message : 'Volume spike not detected'}</strong>
-          <span class="micro-sub">${volumeSpike ? `5m volume ${fmtInt(volumeSpike.currentVolume)} vs mediana ${fmtInt(volumeSpike.baselineVolume)} · x${volumeSpike.ratio}` : `5m volume ${fmtInt(metrics.totalVolume5m)} · brak anomalii względem historii`}</span>
+          <strong>${!isTradesVerified ? 'Volume spike: wstrzymano' : (volumeSpike && volumeSpike.message ? volumeSpike.message : 'Volume spike not detected')}</strong>
+          <span class="micro-sub">${!isTradesVerified ? 'Brak kalkulacji spike ze względu na niezweryfikowane dane wolumenu.' : (volumeSpike ? `5m volume ${fmtInt(volumeSpike.currentVolume)} vs mediana ${fmtInt(volumeSpike.baselineVolume)} · x${volumeSpike.ratio}` : `5m volume ${fmtInt(metrics.totalVolume5m)} · brak anomalii względem historii`)}</span>
         </div>
       </div>
     </div>
@@ -929,7 +943,7 @@ function renderMicro() {
     <div class="micro-panel">
       <div class="micro-head">
         <div class="micro-title">Ostatnie transakcje</div>
-        <div class="micro-sub">${fmtPriceTime(micro.trades.latestTimestamp)}</div>
+        <div class="micro-sub">${fmtPriceTime(micro.trades.latestTimestamp)} (${tradesSource})</div>
       </div>
       <div class="micro-trades">
         ${latestTrades.slice(0, 8).map(trade => `
@@ -944,13 +958,13 @@ function renderMicro() {
     <div class="micro-panel">
       <div class="micro-head">
         <div class="micro-title">Presja 1h</div>
-        <div class="micro-sub">${fmtPriceTime(pressure.windowStart)} - ${fmtPriceTime(pressure.windowEnd)}</div>
+        <div class="micro-sub">${pressure.windowStart ? `${fmtPriceTime(pressure.windowStart)} - ${fmtPriceTime(pressure.windowEnd)}` : 'ostatnia godzina'}</div>
       </div>
       <div class="micro-kpi">
         <div>
           <span class="micro-label">Uptick / downtick</span>
-          <span class="micro-value">${fmtInt(metrics.uptickVolume1h)} / ${fmtInt(metrics.downtickVolume1h)}</span>
-          <span class="micro-sub ${pressureClass}">dominacja ${fmtSignedPct(metrics.pressureDominance1h)}</span>
+          <span class="micro-value">${metrics.uptickVolume1h != null ? `${fmtInt(metrics.uptickVolume1h)} / ${fmtInt(metrics.downtickVolume1h)}` : '—'}</span>
+          <span class="micro-sub ${pressureClass}">${metrics.pressureDominance1h != null ? `dominacja ${fmtSignedPct(metrics.pressureDominance1h)}` : (isTradesVerified ? 'brak kierunku' : 'niezweryfikowane')}</span>
         </div>
         <div>
           <span class="micro-label">Trade count</span>
@@ -966,8 +980,8 @@ function renderMicro() {
       <div class="micro-kpi" style="margin-top:8px">
         <div>
           <span class="micro-label">5m cumulative delta</span>
-          <span class="micro-value">${fmtInt(metrics.cumulativeDelta5m)}</span>
-          <span class="micro-sub">uptick minus downtick</span>
+          <span class="micro-value">${metrics.cumulativeDelta5m != null ? fmtInt(metrics.cumulativeDelta5m) : '—'}</span>
+          <span class="micro-sub">${isTradesVerified ? 'uptick minus downtick' : 'niezweryfikowane'}</span>
         </div>
         <div>
           <span class="micro-label">5m total volume</span>
@@ -976,8 +990,8 @@ function renderMicro() {
         </div>
         <div>
           <span class="micro-label">5m dominance</span>
-          <span class="micro-value">${fmtSignedPct(metrics.pressureDominance5m)}</span>
-          <span class="micro-sub">${pressure5m.windowStart ? `${fmtPriceTime(pressure5m.windowStart)} - ${fmtPriceTime(pressure5m.windowEnd)}` : 'ostatnie 5 minut'}</span>
+          <span class="micro-value">${metrics.pressureDominance5m != null ? fmtSignedPct(metrics.pressureDominance5m) : '—'}</span>
+          <span class="micro-sub">${isTradesVerified && pressure5m.windowStart ? `${fmtPriceTime(pressure5m.windowStart)} - ${fmtPriceTime(pressure5m.windowEnd)}` : (isTradesVerified ? 'ostatnie 5 minut' : 'niezweryfikowane')}</span>
         </div>
       </div>
     </div>`;
@@ -995,6 +1009,11 @@ function buildMicroText() {
   lines.push(`STATUS DANYCH: ${status.badge} — ${status.title}`);
   if (!status.isCurrent) {
     lines.push(`UWAGA: ${status.desc}`);
+  }
+  if (micro && micro.trades) {
+    const isVer = Boolean(micro.trades.verified);
+    const src = micro.trades.source || 'biznesradar.pl';
+    lines.push(`STATUS TRANSAKCJI: ${isVer ? `🟢 Zweryfikowane transakcje jednostkowe (${src})` : '⚠️ Transakcje niezweryfikowane (kalkulacja delty i spike wstrzymana)'}`);
   }
   lines.push('');
 
@@ -1025,6 +1044,7 @@ function buildMicroText() {
   const bookWall = signals.bookWall || null;
   const volumeSpike = signals.volumeSpike || null;
   const rollingImbalance = signals.rollingImbalance5m || null;
+  const isVer = Boolean(micro.trades && micro.trades.verified);
 
   lines.push('=== ARKUSZ ZLECEŃ ===');
   lines.push(`Top bid: ${fmtPrice(book.topBid, 'PLN')} PLN | Top ask: ${fmtPrice(book.topAsk, 'PLN')} PLN | Spread: ${fmtPrice(book.spread, 'PLN')} PLN`);
@@ -1049,23 +1069,24 @@ function buildMicroText() {
     lines.push('');
   }
 
-  lines.push(`=== PRESJA 1H (${fmtPriceTime(pressure.windowStart)} – ${fmtPriceTime(pressure.windowEnd)}) ===`);
+  lines.push(`=== PRESJA 1H (${pressure.windowStart ? fmtPriceTime(pressure.windowStart) : '—'} – ${pressure.windowEnd ? fmtPriceTime(pressure.windowEnd) : '—'}) ===`);
   lines.push(`Transakcji: ${fmtInt(metrics.tradeCount1h)} | Wolumen: ${fmtInt(metrics.totalVolume1h)} | Avg: ${fmtInt(metrics.avgTradeSize1h)}`);
-  lines.push(`Uptick: ${fmtInt(metrics.uptickVolume1h)} | Downtick: ${fmtInt(metrics.downtickVolume1h)} | Flat: ${fmtInt(metrics.flatVolume1h)}`);
-  lines.push(`Dominacja: ${fmtSignedPct(metrics.pressureDominance1h)} | Cumulative delta: ${fmtInt(pressure.cumulativeDelta)}`);
+  lines.push(`Uptick: ${metrics.uptickVolume1h != null ? fmtInt(metrics.uptickVolume1h) : '—'} | Downtick: ${metrics.downtickVolume1h != null ? fmtInt(metrics.downtickVolume1h) : '—'} | Flat: ${metrics.flatVolume1h != null ? fmtInt(metrics.flatVolume1h) : '—'}`);
+  lines.push(`Dominacja: ${metrics.pressureDominance1h != null ? fmtSignedPct(metrics.pressureDominance1h) : '— (niezweryfikowane)'} | Cumulative delta: ${pressure.cumulativeDelta != null ? fmtInt(pressure.cumulativeDelta) : '— (niezweryfikowane)'}`);
   lines.push('');
 
   const p5start = pressure5m.windowStart ? fmtPriceTime(pressure5m.windowStart) : '—';
   const p5end   = pressure5m.windowEnd   ? fmtPriceTime(pressure5m.windowEnd)   : '—';
   lines.push(`=== PRESJA 5M (${p5start} – ${p5end}) ===`);
   lines.push(`Transakcji: ${fmtInt(metrics.tradeCount5m)} | Wolumen: ${fmtInt(metrics.totalVolume5m)} | Avg: ${fmtInt(metrics.avgTradeSize5m)}`);
-  lines.push(`Uptick: ${fmtInt(metrics.uptickVolume5m)} | Downtick: ${fmtInt(metrics.downtickVolume5m)}`);
-  lines.push(`Dominacja: ${fmtSignedPct(metrics.pressureDominance5m)} | Cumulative delta: ${fmtInt(metrics.cumulativeDelta5m)}`);
+  lines.push(`Uptick: ${metrics.uptickVolume5m != null ? fmtInt(metrics.uptickVolume5m) : '—'} | Downtick: ${metrics.downtickVolume5m != null ? fmtInt(metrics.downtickVolume5m) : '—'}`);
+  lines.push(`Dominacja: ${metrics.pressureDominance5m != null ? fmtSignedPct(metrics.pressureDominance5m) : '— (niezweryfikowane)'} | Cumulative delta: ${metrics.cumulativeDelta5m != null ? fmtInt(metrics.cumulativeDelta5m) : '— (niezweryfikowane)'}`);
   lines.push('');
 
   lines.push('=== SYGNAŁY ===');
   if (rollingImbalance) {
-    lines.push(`Rolling imbalance 5m: ${rollingImbalance.message || '—'} (sum ${fmtSignedPct(rollingImbalance.sum)}, cumDelta ${fmtInt(rollingImbalance.cumulativeDelta)})`);
+    const cumDeltaStr = rollingImbalance.cumulativeDelta != null ? fmtInt(rollingImbalance.cumulativeDelta) : '— (niezweryfikowane)';
+    lines.push(`Rolling imbalance 5m: ${rollingImbalance.message || '—'} (sum ${fmtSignedPct(rollingImbalance.sum)}, cumDelta ${cumDeltaStr})`);
   } else {
     lines.push('Rolling imbalance 5m: brak danych');
   }
@@ -1074,7 +1095,9 @@ function buildMicroText() {
   } else {
     lines.push('Book wall: nie wykryto');
   }
-  if (volumeSpike) {
+  if (!isVer) {
+    lines.push('Volume spike: wstrzymano (brak zweryfikowanych transakcji jednostkowych)');
+  } else if (volumeSpike) {
     lines.push(`Volume spike: ${volumeSpike.message || '—'} (5m vol ${fmtInt(volumeSpike.currentVolume)} vs mediana ${fmtInt(volumeSpike.baselineVolume)}, x${volumeSpike.ratio})`);
   } else {
     lines.push(`Volume spike: nie wykryto (5m vol ${fmtInt(metrics.totalVolume5m)})`);

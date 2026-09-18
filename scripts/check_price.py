@@ -56,7 +56,8 @@ MICRO_SOURCES = {
     "oml": {
         "symbol": "OML",
         "book_url": "https://gragieldowa.pl/spolka_arkusz_zl/spolka/oml",
-        "trades_url": "https://gragieldowa.pl/spolka_transakcje/spolka/oml",
+        "trades_url": "https://www.biznesradar.pl/transakcje/OML",
+        "trades_fallback_url": "https://gragieldowa.pl/spolka_transakcje/spolka/oml",
     }
 }
 COINGECKO_IDS = {
@@ -330,13 +331,70 @@ def fetch_quote_coingecko(ticker: str) -> Quote | None:
     )
 
 
+def fetch_quote_biznesradar(ticker: str) -> Quote | None:
+    ticker_id = ticker.upper()
+    url = f"https://www.biznesradar.pl/notowania/{ticker_id}"
+    try:
+        soup = fetch_html(url)
+    except Exception as e:
+        log(f"BiznesRadar błąd pobierania notowań dla {ticker}: {e}")
+        return None
+
+    data = {}
+    for tr in soup.find_all("tr"):
+        cells = [c.get_text(" ", strip=True) for c in tr.find_all(["th", "td"])]
+        if len(cells) >= 2:
+            key = cells[0].strip().rstrip(":").strip().lower()
+            val = cells[1].strip()
+            data[key] = val
+
+    if "kurs" not in data:
+        log(f"BiznesRadar brak kursu w tabeli dla {ticker}")
+        return None
+
+    try:
+        close = parse_pl_float(data["kurs"])
+        open_ = parse_pl_float(data.get("otwarcie", str(close)))
+        min_ = parse_pl_float(data.get("min", str(close)))
+        max_ = parse_pl_float(data.get("max", str(close)))
+        vol = parse_volume_int(data.get("wolumen", "0"))
+        time_str = data.get("data", datetime.now(tz=WARSAW).strftime("%H:%M"))
+        if len(time_str) == 5:
+            time_str += ":00"
+
+        date_str = datetime.now(tz=WARSAW).date().isoformat()
+        for th in soup.find_all("th"):
+            m = re.search(r"(\d{2})\.(\d{2})\.(\d{4})", th.get_text(strip=True))
+            if m:
+                date_str = f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
+                break
+
+        return Quote(
+            symbol=ticker_id,
+            date=date_str,
+            time=time_str,
+            close=close,
+            open_=open_,
+            high=max_,
+            low=min_,
+            volume=vol,
+        )
+    except Exception as e:
+        log(f"BiznesRadar błąd parsowania danych dla {ticker}: {e}")
+        return None
+
+
 def fetch_quote(t: dict) -> Quote | None:
     src = (t.get("source") or "stooq").lower()
     sym = t.get("ticker", t.get("id", "")).strip()
     if src == "stooq":
         return fetch_quote_stooq(sym)
-    if src == "gragieldowa":
-        return fetch_quote_gragieldowa(sym)
+    if src in ("gragieldowa", "biznesradar"):
+        quote = fetch_quote_biznesradar(sym) if src == "biznesradar" else fetch_quote_gragieldowa(sym)
+        if quote is None:
+            log(f"Fallback quote fetcher dla {sym}: próba BiznesRadar...")
+            quote = fetch_quote_biznesradar(sym)
+        return quote
     if src == "coingecko":
         return fetch_quote_coingecko(sym)
     log(f"Nieznane źródło: {src!r}")
@@ -475,6 +533,59 @@ def parse_trades_table(soup: BeautifulSoup, trade_date) -> list[MicroTrade]:
     return trades
 
 
+def parse_trades_biznesradar(soup: BeautifulSoup, default_date: datetime.date) -> tuple[list[MicroTrade], datetime.date, bool]:
+    table = soup.find("table", class_="qTableFull")
+    if not table:
+        return [], default_date, False
+
+    trade_date = default_date
+    first_th = table.find("th")
+    if first_th:
+        m = re.search(r"(\d{2})\.(\d{2})\.(\d{4})", first_th.get_text(strip=True))
+        if m:
+            trade_date = datetime.strptime(f"{m.group(3)}-{m.group(2)}-{m.group(1)}", "%Y-%m-%d").date()
+
+    trades: list[MicroTrade] = []
+    for tr in table.find_all("tr"):
+        tds = tr.find_all("td")
+        if len(tds) < 7:
+            continue
+        time_str = normalize_ws(tds[0].get_text(" ", strip=True))
+        lp_str = normalize_ws(tds[1].get_text(" ", strip=True))
+        kurs_str = normalize_ws(tds[2].get_text(" ", strip=True))
+        vol_str = normalize_ws(tds[5].get_text(" ", strip=True))
+        val_str = normalize_ws(tds[6].get_text(" ", strip=True))
+
+        if not re.match(r"^\d{2}:\d{2}:\d{2}$", time_str):
+            continue
+
+        try:
+            lp = int(lp_str)
+            price = parse_pl_float(kurs_str)
+            volume = parse_volume_int(vol_str)
+            val = parse_pl_float(val_str)
+
+            # Verification: individual trade volume * price must align with transaction value
+            calc_val = price * volume
+            if abs(calc_val - val) > max(3.0, val * 0.05):
+                log(f"Odrzucono transakcję {lp} ({time_str}): rozbieżność kurs/wolumen/wartość (kurs={price}, vol={volume}, val={val})")
+                continue
+
+            dt = datetime.strptime(f"{trade_date.isoformat()} {time_str}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=WARSAW)
+            trades.append(MicroTrade(
+                time=time_str,
+                price=price,
+                volume=volume,
+                timestamp=dt.isoformat(),
+            ))
+        except (ValueError, TypeError):
+            continue
+
+    trades.sort(key=lambda t: t.timestamp)
+    verified = len(trades) > 0
+    return trades, trade_date, verified
+
+
 def parse_book_updated_at(lines: list[str], now: datetime) -> datetime:
     for line in lines:
         m = re.search(r"Ostatnia aktualizacja:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})", line)
@@ -605,6 +716,27 @@ def summarize_pressure(trades: list[MicroTrade], latest_dt: datetime, window: ti
     }
 
 
+def summarize_unverified_pressure(trades: list[MicroTrade], latest_dt: datetime, window: timedelta) -> dict:
+    window_start = latest_dt - window
+    recent = [t for t in trades if datetime.fromisoformat(t.timestamp) >= window_start]
+    total_volume = sum(t.volume for t in recent)
+    trade_count = len(recent)
+    avg_trade_size = (total_volume / trade_count) if trade_count else 0.0
+    return {
+        "windowStart": window_start.isoformat(),
+        "windowEnd": latest_dt.isoformat(),
+        "tradeCount": trade_count,
+        "totalVolume": total_volume,
+        "avgTradeSize": round(avg_trade_size, 2),
+        "uptickVolume": None,
+        "downtickVolume": None,
+        "flatVolume": None,
+        "dominance": None,
+        "cumulativeDelta": None,
+        "latestTrades": [trade_to_dict(t) for t in recent[-MICRO_TRADES_LIMIT:]][::-1],
+    }
+
+
 def build_book_wall_signal(side: str, levels: list[MicroLevel]) -> dict | None:
     if len(levels) < 3:
         return None
@@ -657,6 +789,7 @@ def snapshot_from_entry(entry: dict) -> dict:
         "bookWallSide": book_wall.get("side"),
         "bookWallPrice": book_wall.get("price"),
         "volumeSpikeRatio": volume_spike.get("ratio"),
+        "tradesVerified": metrics.get("tradesVerified", False),
     }
 
 
@@ -671,7 +804,38 @@ def merge_micro_history(previous: dict | None, entry: dict) -> list[dict]:
 def build_micro_entry(ticker_id: str, now: datetime, previous: dict | None = None) -> dict:
     src = MICRO_SOURCES[ticker_id]
     book_soup = fetch_html(src["book_url"])
-    trades_soup = fetch_html(src["trades_url"])
+
+    trades_source = "biznesradar.pl"
+    trades: list[MicroTrade] = []
+    trade_date = now.date()
+    verified = False
+
+    try:
+        trades_soup = fetch_html(src["trades_url"])
+        trades, trade_date, verified = parse_trades_biznesradar(trades_soup, now.date())
+        if not trades:
+            raise RuntimeError(f"BiznesRadar nie zwrócił transakcji dla {ticker_id}")
+    except Exception as e:
+        log(f"[{ticker_id}] Błąd pobierania transakcji z BiznesRadar: {e}")
+        fallback_url = src.get("trades_fallback_url")
+        if fallback_url:
+            try:
+                log(f"[{ticker_id}] Próba pobrania transakcji z fallbacku ({fallback_url})...")
+                fb_soup = fetch_html(fallback_url)
+                fb_lines = text_lines(fb_soup.get_text("\n"))
+                fb_trade_date = parse_trade_date(fb_lines, now)
+                trades = parse_trades_table(fb_soup, fb_trade_date)
+                trade_date = fb_trade_date
+                trades_source = "gragieldowa.pl (niezweryfikowane)"
+                verified = False
+            except Exception as e_fb:
+                log(f"[{ticker_id}] Fallback transakcji również nie powiódł się: {e_fb}")
+
+    if not trades:
+        raise RuntimeError(f"Nie udało się pobrać ani sparsować transakcji dla {ticker_id}")
+
+    latest_trade_dt = datetime.fromisoformat(trades[-1].timestamp)
+    updated_at = latest_trade_dt
 
     book_updated_at = parse_book_updated_at_from_soup(book_soup, now)
     bids = parse_book_table(book_soup, "arkusz_left")
@@ -685,16 +849,12 @@ def build_micro_entry(ticker_id: str, now: datetime, previous: dict | None = Non
     if not bids or not asks:
         log(f"[{ticker_id}] arkusz zleceń pusty — zapisuję analizę transakcji bez arkusza")
 
-    trade_lines = text_lines(trades_soup.get_text("\n"))
-    trade_date = parse_trade_date(trade_lines, now)
-    trades = parse_trades_table(trades_soup, trade_date)
-    if not trades:
-        raise RuntimeError(f"Nie udało się sparsować transakcji dla {ticker_id}")
-
-    latest_trade_dt = datetime.fromisoformat(trades[-1].timestamp)
-    updated_at = latest_trade_dt
-    pressure_1h = summarize_pressure(trades, latest_trade_dt, timedelta(hours=1))
-    pressure_5m = summarize_pressure(trades, latest_trade_dt, timedelta(minutes=5))
+    if verified:
+        pressure_1h = summarize_pressure(trades, latest_trade_dt, timedelta(hours=1))
+        pressure_5m = summarize_pressure(trades, latest_trade_dt, timedelta(minutes=5))
+    else:
+        pressure_1h = summarize_unverified_pressure(trades, latest_trade_dt, timedelta(hours=1))
+        pressure_5m = summarize_unverified_pressure(trades, latest_trade_dt, timedelta(minutes=5))
 
     bid_volume_top = sum(l.volume for l in bids)
     ask_volume_top = sum(l.volume for l in asks)
@@ -726,8 +886,12 @@ def build_micro_entry(ticker_id: str, now: datetime, previous: dict | None = Non
         "trades": {
             "latest": [trade_to_dict(t) for t in trades[-MICRO_TRADES_LIMIT:]][::-1],
             "latestTimestamp": trades[-1].timestamp,
+            "count": len(trades),
+            "verified": verified,
+            "source": trades_source,
         },
         "metrics": {
+            "tradesVerified": verified,
             "orderBookImbalance": round(imbalance, 4),
             "bidVolumeTop": bid_volume_top,
             "askVolumeTop": ask_volume_top,
@@ -756,13 +920,21 @@ def build_micro_entry(ticker_id: str, now: datetime, previous: dict | None = Non
     }
 
     snapshots = merge_micro_history(previous, provisional_entry)
-    previous_5m_volumes = [int(point.get("totalVolume5m") or 0) for point in snapshots[:-1]]
-    volume_spike = build_volume_spike_signal(pressure_5m["totalVolume"], previous_5m_volumes)
+    if verified:
+        previous_5m_volumes = [int(point.get("totalVolume5m") or 0) for point in snapshots[:-1]]
+        volume_spike = build_volume_spike_signal(pressure_5m["totalVolume"], previous_5m_volumes)
+    else:
+        volume_spike = None
+
     recent_snapshots = [
         point for point in snapshots
         if point.get("scrapedAt")
         and datetime.fromisoformat(point["scrapedAt"]) >= now - timedelta(minutes=25)
     ]
+    cum_delta_recent = (
+        sum(int(point.get("cumulativeDelta5m") or 0) for point in recent_snapshots if point.get("cumulativeDelta5m") is not None)
+        if verified else None
+    )
     rolling_imbalance = {
         "points": len(recent_snapshots),
         "sum": round(sum(float(point.get("orderBookImbalance") or 0.0) for point in recent_snapshots), 4),
@@ -770,7 +942,7 @@ def build_micro_entry(ticker_id: str, now: datetime, previous: dict | None = Non
             sum(float(point.get("orderBookImbalance") or 0.0) for point in recent_snapshots) / max(len(recent_snapshots), 1),
             4,
         ),
-        "cumulativeDelta": sum(int(point.get("cumulativeDelta5m") or 0) for point in recent_snapshots),
+        "cumulativeDelta": cum_delta_recent,
     }
     if recent_snapshots:
         rolling_imbalance["message"] = (
