@@ -3,9 +3,9 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-09-18T14:08:04.223746+02:00",
+      "scrapedAt": "2026-09-18T14:08:41.045853+02:00",
       "marketDate": "2026-09-18",
-      "updatedAt": "2026-09-18T13:52:21+02:00",
+      "updatedAt": "2026-09-18T13:53:05+02:00",
       "delayMinutes": 15,
       "book": {
         "bids": [
@@ -76,10 +76,16 @@
         "topAsk": 2.26,
         "spread": 0.02,
         "stale": false,
-        "updatedAt": "2026-09-18T13:52:21+02:00"
+        "updatedAt": "2026-09-18T13:53:05+02:00"
       },
       "trades": {
         "latest": [
+          {
+            "time": "13:53:05",
+            "price": 2.26,
+            "volume": 75,
+            "timestamp": "2026-09-18T13:53:05+02:00"
+          },
           {
             "time": "13:52:21",
             "price": 2.26,
@@ -223,15 +229,9 @@
             "price": 2.26,
             "volume": 361,
             "timestamp": "2026-09-18T13:13:52+02:00"
-          },
-          {
-            "time": "13:12:04",
-            "price": 2.26,
-            "volume": 436,
-            "timestamp": "2026-09-18T13:12:04+02:00"
           }
         ],
-        "latestTimestamp": "2026-09-18T13:52:21+02:00",
+        "latestTimestamp": "2026-09-18T13:53:05+02:00",
         "count": 100,
         "verified": true,
         "source": "biznesradar.pl"
@@ -241,33 +241,39 @@
         "orderBookImbalance": 0.3747,
         "bidVolumeTop": 33936,
         "askVolumeTop": 15438,
-        "tradeCount1h": 36,
-        "avgTradeSize1h": 585.61,
-        "uptickVolume1h": 2332,
+        "tradeCount1h": 37,
+        "avgTradeSize1h": 571.81,
+        "uptickVolume1h": 2407,
         "downtickVolume1h": 17940,
         "flatVolume1h": 810,
-        "pressureDominance1h": -0.7699,
-        "totalVolume1h": 21082,
-        "tradeCount5m": 3,
-        "avgTradeSize5m": 316.0,
-        "uptickVolume5m": 53,
+        "pressureDominance1h": -0.7634,
+        "totalVolume1h": 21157,
+        "tradeCount5m": 4,
+        "avgTradeSize5m": 255.75,
+        "uptickVolume5m": 128,
         "downtickVolume5m": 0,
         "pressureDominance5m": 1.0,
-        "totalVolume5m": 948,
-        "cumulativeDelta5m": 53
+        "totalVolume5m": 1023,
+        "cumulativeDelta5m": 128
       },
       "pressure1h": {
-        "windowStart": "2026-09-18T12:52:21+02:00",
-        "windowEnd": "2026-09-18T13:52:21+02:00",
-        "tradeCount": 36,
-        "totalVolume": 21082,
-        "avgTradeSize": 585.61,
-        "uptickVolume": 2332,
+        "windowStart": "2026-09-18T12:53:05+02:00",
+        "windowEnd": "2026-09-18T13:53:05+02:00",
+        "tradeCount": 37,
+        "totalVolume": 21157,
+        "avgTradeSize": 571.81,
+        "uptickVolume": 2407,
         "downtickVolume": 17940,
         "flatVolume": 810,
-        "dominance": -0.7699,
-        "cumulativeDelta": -15608,
+        "dominance": -0.7634,
+        "cumulativeDelta": -15533,
         "latestTrades": [
+          {
+            "time": "13:53:05",
+            "price": 2.26,
+            "volume": 75,
+            "timestamp": "2026-09-18T13:53:05+02:00"
+          },
           {
             "time": "13:52:21",
             "price": 2.26,
@@ -411,27 +417,27 @@
             "price": 2.26,
             "volume": 361,
             "timestamp": "2026-09-18T13:13:52+02:00"
-          },
-          {
-            "time": "13:12:04",
-            "price": 2.26,
-            "volume": 436,
-            "timestamp": "2026-09-18T13:12:04+02:00"
           }
         ]
       },
       "pressure5m": {
-        "windowStart": "2026-09-18T13:47:21+02:00",
-        "windowEnd": "2026-09-18T13:52:21+02:00",
-        "tradeCount": 3,
-        "totalVolume": 948,
-        "avgTradeSize": 316.0,
-        "uptickVolume": 53,
+        "windowStart": "2026-09-18T13:48:05+02:00",
+        "windowEnd": "2026-09-18T13:53:05+02:00",
+        "tradeCount": 4,
+        "totalVolume": 1023,
+        "avgTradeSize": 255.75,
+        "uptickVolume": 128,
         "downtickVolume": 0,
         "flatVolume": 895,
         "dominance": 1.0,
-        "cumulativeDelta": 53,
+        "cumulativeDelta": 128,
         "latestTrades": [
+          {
+            "time": "13:53:05",
+            "price": 2.26,
+            "volume": 75,
+            "timestamp": "2026-09-18T13:53:05+02:00"
+          },
           {
             "time": "13:52:21",
             "price": 2.26,
@@ -463,26 +469,14 @@
         },
         "volumeSpike": null,
         "rollingImbalance5m": {
-          "points": 4,
-          "sum": 1.4988,
+          "points": 5,
+          "sum": 1.8735,
           "avg": 0.3747,
-          "cumulativeDelta": 630,
+          "cumulativeDelta": 758,
           "message": "buy pressure trend"
         }
       },
       "snapshots": [
-        {
-          "scrapedAt": "2026-08-24T17:53:23.190468+02:00",
-          "updatedAt": "2026-08-24T16:44:34+02:00",
-          "orderBookImbalance": -0.2133,
-          "pressureDominance5m": 1.0,
-          "cumulativeDelta5m": 6589,
-          "totalVolume5m": 11270,
-          "tradeCount5m": 9,
-          "bookWallSide": "ask",
-          "bookWallPrice": 2.31,
-          "volumeSpikeRatio": null
-        },
         {
           "scrapedAt": "2026-08-24T18:36:06.385908+02:00",
           "updatedAt": "2026-08-24T16:44:34+02:00",
@@ -1338,9 +1332,22 @@
           "bookWallPrice": 2.2,
           "volumeSpikeRatio": null,
           "tradesVerified": true
+        },
+        {
+          "scrapedAt": "2026-09-18T14:08:41.045853+02:00",
+          "updatedAt": "2026-09-18T13:53:05+02:00",
+          "orderBookImbalance": 0.3747,
+          "pressureDominance5m": 1.0,
+          "cumulativeDelta5m": 128,
+          "totalVolume5m": 1023,
+          "tradeCount5m": 4,
+          "bookWallSide": "bid",
+          "bookWallPrice": 2.2,
+          "volumeSpikeRatio": null,
+          "tradesVerified": true
         }
       ]
     }
   },
-  "updatedAt": "2026-09-18T14:08:04.223746+02:00"
+  "updatedAt": "2026-09-18T14:08:41.045853+02:00"
 }
