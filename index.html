@@ -178,6 +178,30 @@
     color: var(--muted); font-size: 12px; text-align: center;
     padding: 8px 4px;
   }
+  .micro-status-banner {
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    line-height: 1.4;
+    border: 1px solid var(--border);
+  }
+  .micro-status-banner strong { display: block; font-size: 13px; margin-bottom: 3px; }
+  .micro-status-banner.ok {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #86efac;
+  }
+  .micro-status-banner.warn {
+    background: rgba(234, 179, 8, 0.12);
+    border-color: rgba(234, 179, 8, 0.35);
+    color: #fef08a;
+  }
+  .micro-status-banner.error {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+  }
   @media (max-width: 420px) {
     .micro-kpi { grid-template-columns: 1fr; }
   }
@@ -474,6 +498,81 @@ function fmtSignedPct(value) {
   return `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`;
 }
 
+function microDataStatus(micro) {
+  if (!micro || !micro.book || !micro.trades || !micro.metrics || !micro.pressure1h) {
+    return {
+      code: 'red',
+      badge: '🔴 Brak danych',
+      title: 'Brak kompletnych danych mikrostruktury',
+      desc: (micro && micro.lastError) ? `Błąd scrapera: ${micro.lastError.message}` : 'Scraper jeszcze nie zapisał pełnych danych dla OML.',
+      isCurrent: false,
+    };
+  }
+
+  const now = new Date();
+  const updated = new Date(micro.updatedAt);
+  const scraped = new Date(micro.scrapedAt || micro.updatedAt);
+  const ageMinutes = (now.getTime() - updated.getTime()) / 60000;
+  const scrapeAgeMinutes = (now.getTime() - scraped.getTime()) / 60000;
+
+  let warsawDate = '';
+  try {
+    warsawDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw' }).format(now);
+  } catch (_) {
+    warsawDate = now.toISOString().slice(0, 10);
+  }
+  const isToday = micro.marketDate === warsawDate;
+  const hasError = Boolean(micro.lastError);
+
+  if (hasError && !isToday) {
+    return {
+      code: 'yellow',
+      badge: '🟡 Stare dane (błąd scrapera)',
+      title: 'Dane archiwalne z poprzedniej sesji',
+      desc: `Ostatnia udana aktualizacja: ${fmtPriceTime(micro.updatedAt)} (${micro.marketDate}). Błąd przy ostatniej próbie: ${micro.lastError.message}.`,
+      isCurrent: false,
+    };
+  }
+
+  if (!isToday) {
+    return {
+      code: 'yellow',
+      badge: '🟡 Dane archiwalne',
+      title: `Stan z poprzedniej sesji (${micro.marketDate})`,
+      desc: `Ostatni odczyt: ${fmtPriceTime(micro.updatedAt)}. Dzisiejsza sesja nie została jeszcze wczytana.`,
+      isCurrent: false,
+    };
+  }
+
+  if (hasError) {
+    return {
+      code: 'yellow',
+      badge: '🟡 Problem z odświeżaniem',
+      title: 'Scraper napotkał problem przy ostatniej próbie',
+      desc: `Ostatni poprawny stan: ${fmtPriceTime(micro.updatedAt)}. Błąd: ${micro.lastError.message}`,
+      isCurrent: ageMinutes < 30,
+    };
+  }
+
+  if (scrapeAgeMinutes <= 30) {
+    return {
+      code: 'green',
+      badge: '🟢 Świeże dane',
+      title: 'Dane aktualne z bieżącej sesji',
+      desc: `Aktualizacja rynku: ${fmtPriceTime(micro.updatedAt)} (pobrano ${fmtPriceTime(micro.scrapedAt)}, opóźnienie ~${micro.delayMinutes || 15} min).`,
+      isCurrent: true,
+    };
+  }
+
+  return {
+    code: 'yellow',
+    badge: '🟡 Stare dane',
+    title: `Odczyt sprzed ${Math.round(scrapeAgeMinutes)} min`,
+    desc: `Scraper nie pobrał świeżych danych w ostatnich minutach (ostatni stan: ${fmtPriceTime(micro.updatedAt)}).`,
+    isCurrent: false,
+  };
+}
+
 async function fetchConfig() {
   try {
     const r = await fetch(`./data/config.json?t=${Date.now()}`, { cache: 'no-store' });
@@ -707,10 +806,32 @@ function renderMicro() {
   }
 
   const micro = microState(t);
-  if (!micro || !micro.book || !micro.trades || !micro.metrics || !micro.pressure1h) {
-    meta.textContent = 'Scraper jeszcze nie zapisał danych albo ostatni odczyt się nie udał.';
-    content.innerHTML = '<div class="micro-empty">Brak danych mikrostruktury dla OML.</div>';
+  const status = microDataStatus(micro);
+
+  if (status.code === 'red') {
+    meta.textContent = status.title;
+    content.innerHTML = `
+      <div class="micro-status-banner error">
+        <strong>${status.badge} · ${status.title}</strong>
+        <div class="micro-sub" style="color:#fca5a5">${status.desc}</div>
+      </div>
+      <div class="micro-empty">Nie pokazujemy mikrostruktury jako aktualnej ze względu na brak pełnych danych ze scrapera.</div>`;
     return;
+  }
+
+  let statusBanner = '';
+  if (status.code === 'yellow') {
+    statusBanner = `
+      <div class="micro-status-banner warn">
+        <strong>${status.badge} · ${status.title}</strong>
+        <div class="micro-sub" style="color:#fef08a">${status.desc}</div>
+      </div>`;
+  } else {
+    statusBanner = `
+      <div class="micro-status-banner ok">
+        <strong>${status.badge} · ${status.title}</strong>
+        <div class="micro-sub" style="color:#86efac">${status.desc}</div>
+      </div>`;
   }
 
   const bids = micro.book.bids || [];
@@ -732,8 +853,9 @@ function renderMicro() {
     ? '—'
     : fmtInt(metrics.avgTradeSize1h);
 
-  meta.textContent = `Źródło: graGieldowa.pl · dane opóźnione ok. ${micro.delayMinutes || 15} min · aktualizacja ${fmtPriceTime(micro.updatedAt)}`;
+  meta.textContent = `Źródło: graGieldowa.pl · stan rynku: ${fmtPriceTime(micro.updatedAt)} · ${status.badge}`;
   content.innerHTML = `
+    ${statusBanner}
     <div class="micro-panel">
       <div class="micro-head">
         <div class="micro-title">Sygnały</div>
@@ -867,8 +989,13 @@ function buildMicroText() {
   const ts = t ? tickerState(t) : null;
   const lines = [];
 
+  const status = microDataStatus(micro);
   const stamp = micro ? fmtPriceTime(micro.updatedAt) : new Date().toLocaleString('pl-PL');
   lines.push(`OML Mikrostruktura – ${stamp} (opóźnienie ~${micro ? micro.delayMinutes || 15 : 15} min)`);
+  lines.push(`STATUS DANYCH: ${status.badge} — ${status.title}`);
+  if (!status.isCurrent) {
+    lines.push(`UWAGA: ${status.desc}`);
+  }
   lines.push('');
 
   if (ts && ts.lastBySlot && t && t.schedule) {

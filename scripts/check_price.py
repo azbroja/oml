@@ -64,6 +64,8 @@ COINGECKO_IDS = {
     "btcusd": "bitcoin",
     "bitcoin": "bitcoin",
 }
+USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+
 
 
 @dataclass
@@ -188,7 +190,7 @@ def latest_unprocessed_past_slot_for_ticker(now: datetime, t: dict, ts: dict) ->
 def fetch_quote_stooq(ticker: str) -> Quote | None:
     url = f"https://stooq.com/q/l/?s={ticker.lower()}&f=sd2t2ohlcv&h&e=csv"
     log(f"GET {url}")
-    r = requests.get(url, timeout=15, headers={"User-Agent": "multi-alert/1.0"})
+    r = requests.get(url, timeout=15, headers={"User-Agent": USER_AGENT})
     r.raise_for_status()
     rows = list(csv.DictReader(io.StringIO(r.text)))
     if not rows:
@@ -223,28 +225,25 @@ def parse_volume_int(text: str) -> int:
     cleaned = normalize_ws(text).replace(" ", "")
     if not cleaned:
         return 0
+    # European thousands with dots: e.g. '1.000', '23.852', '1.234.567'
+    if re.match(r"^\d{1,3}(\.\d{3})+$", cleaned):
+        cleaned = cleaned.replace(".", "")
+        try:
+            return int(cleaned)
+        except ValueError:
+            return 0
+    # Numbers with commas or decimal dots: e.g. '1,00', '1.0', '100,00', '20.00'
     cleaned = cleaned.replace(",", ".")
-    if "." in cleaned:
-        whole, frac = cleaned.split(".", 1)
-        # GraGieldowa abbreviates thousands as 1.5, 1.05, 1.005.
-        cleaned = whole + frac.ljust(3, "0")[:3]
     try:
-        return int(cleaned)
+        val = float(cleaned)
+        return int(round(val))
     except ValueError:
         return 0
 
 
 def apply_cumulative_volumes(rows: list[dict]) -> list[dict]:
-    previous = 0
-    normalized = []
-    for row in rows:
-        current = int(row.get("volume", 0) or 0)
-        volume = current - previous if current >= previous else current
-        item = dict(row)
-        item["volume"] = max(volume, 0)
-        normalized.append(item)
-        previous = current
-    return normalized
+    # GraGieldowa column 'Wolumen' reports per-trade volume, not cumulative volume.
+    return rows
 
 
 def fetch_quote_gragieldowa(ticker: str, now: datetime | None = None) -> Quote | None:
@@ -284,7 +283,7 @@ def fetch_quote_gragieldowa(ticker: str, now: datetime | None = None) -> Quote |
         return None
 
     rows.sort(key=lambda item: item["lp"])
-    rows = apply_cumulative_volumes(rows)
+
     open_row = rows[0]
     close_row = rows[-1]
     prices = [row["price"] for row in rows]
@@ -310,7 +309,7 @@ def fetch_quote_coingecko(ticker: str) -> Quote | None:
         f"?ids={coin_id}&vs_currencies=usd&include_24hr_vol=true"
     )
     log(f"GET {url}")
-    r = requests.get(url, timeout=15, headers={"User-Agent": "multi-alert/1.0"})
+    r = requests.get(url, timeout=15, headers={"User-Agent": USER_AGENT})
     r.raise_for_status()
     data = r.json().get(coin_id, {})
     price = data.get("usd")
@@ -390,7 +389,7 @@ def parse_pl_int(text: str) -> int:
 
 def fetch_html(url: str) -> BeautifulSoup:
     log(f"GET {url}")
-    r = requests.get(url, timeout=MICRO_TIMEOUT, headers={"User-Agent": "multi-alert/1.0"})
+    r = requests.get(url, timeout=MICRO_TIMEOUT, headers={"User-Agent": USER_AGENT})
     r.raise_for_status()
     return BeautifulSoup(r.text, "html.parser")
 
@@ -456,14 +455,13 @@ def parse_trades_table(soup: BeautifulSoup, trade_date) -> list[MicroTrade]:
             rows.append({
                 "lp": lp,
                 "time": time,
-                "price": float(price_raw),
+                "price": parse_pl_float(price_raw),
                 "volume": parse_volume_int(volume_raw),
                 "timestamp": dt.isoformat(),
             })
         except ValueError:
             continue
     rows.sort(key=lambda item: item["lp"])
-    rows = apply_cumulative_volumes(rows)
     trades = [
         MicroTrade(
             time=row["time"],
