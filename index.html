@@ -202,6 +202,60 @@
     border-color: rgba(239, 68, 68, 0.35);
     color: #fca5a5;
   }
+  .copy-micro-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 13px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    margin-top: 0;
+    width: auto;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .copy-micro-btn:hover {
+    border-color: var(--accent);
+    color: #fff;
+    background: rgba(99, 102, 241, 0.18);
+    transform: translateY(-1px);
+  }
+  .copy-micro-btn.copied {
+    border-color: var(--ok) !important;
+    background: rgba(34, 197, 94, 0.18) !important;
+    color: var(--ok) !important;
+  }
+  .copy-micro-btn svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+  }
+  .copy-micro-bottom {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .copy-micro-bottom.copied {
+    border-color: var(--ok) !important;
+    background: rgba(34, 197, 94, 0.18) !important;
+    color: var(--ok) !important;
+  }
+  .copy-micro-bottom svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
   @media (max-width: 420px) {
     .micro-kpi { grid-template-columns: 1fr; }
   }
@@ -264,19 +318,27 @@
 </div>
 
 <div id="microCard" class="card">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;flex-wrap:wrap">
     <h2 style="margin:0">Mikrostruktura OML</h2>
-    <button id="copyMicro" class="icon-btn" aria-label="Kopiuj dane do schowka" title="Kopiuj dane do schowka" style="width:32px;height:32px;border-radius:8px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+    <button id="copyMicro" class="copy-micro-btn" aria-label="Kopiuj raport mikrostruktury" title="Kopiuj pełny raport mikrostruktury do schowka">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
       </svg>
+      <span class="copy-label">Kopiuj raport</span>
     </button>
   </div>
   <div id="microMeta" class="hint" style="margin-bottom:12px">Ładuję dane arkusza i transakcji…</div>
   <div id="microContent" class="micro-grid">
     <div class="micro-empty">Brak danych.</div>
   </div>
+  <button id="copyMicroBottom" class="secondary copy-micro-bottom" aria-label="Kopiuj pełny raport do schowka">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+    <span class="copy-label">Kopiuj raport mikrostruktury</span>
+  </button>
 </div>
 
 <div id="notificationsCard" class="card hidden">
@@ -799,11 +861,18 @@ function renderMicro() {
   }
   card.classList.remove('hidden');
 
+  const copyTop = $('copyMicro');
+  const copyBottom = $('copyMicroBottom');
+
   if (t.id !== 'oml') {
+    if (copyTop) copyTop.classList.add('hidden');
+    if (copyBottom) copyBottom.classList.add('hidden');
     meta.textContent = 'Mikrostruktura jest na razie dostępna tylko dla OML.';
     content.innerHTML = '<div class="micro-empty">Przełącz na OML, aby zobaczyć arkusz i transakcje.</div>';
     return;
   }
+  if (copyTop) copyTop.classList.remove('hidden');
+  if (copyBottom) copyBottom.classList.remove('hidden');
 
   const micro = microState(t);
   const status = microDataStatus(micro);
@@ -1335,9 +1404,8 @@ $('toggleSettings').addEventListener('click', () => {
 
 $('refreshHistory').addEventListener('click', refreshHistory);
 
-$('copyMicro').addEventListener('click', async () => {
+async function copyMicroReport() {
   const text = buildMicroText();
-  const btn = $('copyMicro');
   try {
     await navigator.clipboard.writeText(text);
   } catch (_) {
@@ -1349,10 +1417,33 @@ $('copyMicro').addEventListener('click', async () => {
     document.execCommand('copy');
     document.body.removeChild(ta);
   }
-  btn.style.color = 'var(--ok)';
-  btn.style.borderColor = 'var(--ok)';
-  setTimeout(() => { btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
-});
+
+  const btns = [$('copyMicro'), $('copyMicroBottom')].filter(Boolean);
+  btns.forEach(b => {
+    b.classList.add('copied');
+    const lbl = b.querySelector('.copy-label');
+    if (lbl) {
+      if (!b.dataset.prevText) b.dataset.prevText = lbl.textContent;
+      lbl.textContent = '✓ Skopiowano do schowka!';
+    }
+  });
+
+  setTimeout(() => {
+    btns.forEach(b => {
+      b.classList.remove('copied');
+      const lbl = b.querySelector('.copy-label');
+      if (lbl && b.dataset.prevText) {
+        lbl.textContent = b.dataset.prevText;
+        delete b.dataset.prevText;
+      }
+    });
+  }, 2200);
+}
+
+const copyBtnTop = $('copyMicro');
+if (copyBtnTop) copyBtnTop.addEventListener('click', copyMicroReport);
+const copyBtnBottom = $('copyMicroBottom');
+if (copyBtnBottom) copyBtnBottom.addEventListener('click', copyMicroReport);
 
 let autoRefreshHandle = null;
 
