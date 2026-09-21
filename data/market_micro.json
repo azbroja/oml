@@ -3,7 +3,7 @@
     "oml": {
       "symbol": "OML",
       "source": "gragieldowa.pl",
-      "scrapedAt": "2026-09-21T20:56:04.181684+02:00",
+      "scrapedAt": "2026-09-21T20:57:02.510556+02:00",
       "marketDate": "2026-09-21",
       "updatedAt": "2026-09-21T17:00:33+02:00",
       "delayMinutes": 15,
@@ -565,31 +565,19 @@
         },
         "volumeSpike": {
           "currentVolume": 13611,
-          "baselineVolume": 948,
-          "ratio": 14.36,
+          "baselineVolume": 1000,
+          "ratio": 13.61,
           "message": "abnormal volume detected"
         },
         "rollingImbalance5m": {
-          "points": 1,
-          "sum": 0.2149,
+          "points": 2,
+          "sum": 0.4298,
           "avg": 0.2149,
           "cumulativeDelta": 0,
           "message": "buy pressure trend"
         }
       },
       "snapshots": [
-        {
-          "scrapedAt": "2026-08-25T11:51:23.091156+02:00",
-          "updatedAt": "2026-08-25T11:39:37+02:00",
-          "orderBookImbalance": -0.098,
-          "pressureDominance5m": 0.0,
-          "cumulativeDelta5m": 0,
-          "totalVolume5m": 336,
-          "tradeCount5m": 4,
-          "bookWallSide": "bid",
-          "bookWallPrice": 2.2,
-          "volumeSpikeRatio": null
-        },
         {
           "scrapedAt": "2026-08-25T12:24:41.726834+02:00",
           "updatedAt": "2026-08-25T11:55:59+02:00",
@@ -1451,9 +1439,22 @@
           "bookWallPrice": 2.65,
           "volumeSpikeRatio": null,
           "tradesVerified": true
+        },
+        {
+          "scrapedAt": "2026-09-21T20:57:02.510556+02:00",
+          "updatedAt": "2026-09-21T17:00:33+02:00",
+          "orderBookImbalance": 0.2149,
+          "pressureDominance5m": 0.0,
+          "cumulativeDelta5m": 0,
+          "totalVolume5m": 13611,
+          "tradeCount5m": 20,
+          "bookWallSide": "ask",
+          "bookWallPrice": 2.65,
+          "volumeSpikeRatio": null,
+          "tradesVerified": true
         }
       ]
     }
   },
-  "updatedAt": "2026-09-21T20:56:04.181684+02:00"
+  "updatedAt": "2026-09-21T20:57:02.510556+02:00"
 }
