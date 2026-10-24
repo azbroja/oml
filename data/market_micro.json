@@ -1527,8 +1527,12 @@
           "volumeSpikeRatio": null,
           "tradesVerified": false
         }
-      ]
+      ],
+      "lastError": {
+        "message": "Nie udało się pobrać ani sparsować transakcji dla oml",
+        "at": "2026-10-24T13:54:37.229290+02:00"
+      }
     }
   },
-  "updatedAt": "2026-10-23T19:23:42.511508+02:00"
+  "updatedAt": "2026-10-24T13:54:37.229290+02:00"
 }
